@@ -46,11 +46,75 @@
             border-bottom: 1px solid #3a3a3a;
         }
 
-        /* Botón de cuota clásico bet365 */
+        /* Botón de cuota clásico bet365 (optimizado para touch en celular) */
         .odd-btn {
             background-color: #3a3a3a;
             border: 1px solid #4a4a4a;
+            min-height: 44px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
             transition: background-color 0.12s ease, border-color 0.12s ease, transform 0.1s ease;
+        }
+        .odd-btn:hover:not(:disabled) {
+            background-color: #4a4a4a;
+            border-color: var(--b365-yellow);
+        }
+        .odd-btn:active:not(:disabled) {
+            transform: scale(0.97);
+        }
+        .odd-btn.is-active {
+            background-color: #e5e5e5;
+            color: #141414;
+            border-color: #ffffff;
+        }
+        .odd-btn.is-active .odd-val {
+            color: #005440;
+        }
+        .odd-val {
+            color: var(--b365-yellow);
+            font-weight: 700;
+        }
+
+        /* Animación sutil cuando cambia una cuota o gol en vivo */
+        @keyframes livePulseBorder {
+            0%, 100% { border-color: rgba(244, 63, 94, 0.55); }
+            50% { border-color: rgba(255, 223, 27, 0.85); }
+        }
+        .live-match-card {
+            animation: livePulseBorder 2.2s infinite;
+        }
+
+        /* Tabs activos */
+        .nav-tab {
+            position: relative;
+            color: #b5b5b5;
+            transition: color 0.15s ease;
+        }
+        .nav-tab:hover {
+            color: #ffffff;
+        }
+        .nav-tab.is-active {
+            color: var(--b365-yellow);
+            font-weight: 700;
+        }
+        .nav-tab.is-active::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -1px;
+            height: 3px;
+            background-color: var(--b365-yellow);
+        }
+
+        /* Barra inferior móvil */
+        .mobile-nav-btn {
+            color: #a3a3a3;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .mobile-nav-btn.is-active {
+            color: var(--b365-yellow);
         }
         .odd-btn:hover:not(:disabled) {
             background-color: #4a4a4a;
@@ -124,12 +188,12 @@
          HEADER PRINCIPAL ESTILO BET365
     =========================================== -->
     <header class="b365-header sticky top-0 z-30 shadow-lg">
-        <div class="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
+        <div class="max-w-7xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between gap-2">
             <!-- Logo -->
-            <div class="flex items-center space-x-3 shrink-0">
+            <div class="flex items-center space-x-2 sm:space-x-3 shrink-0">
                 <div class="flex items-baseline select-none">
-                    <span class="text-white font-extrabold text-2xl tracking-tight">bet</span>
-                    <span class="text-[#ffdf1b] font-extrabold text-2xl tracking-tight">3v3</span>
+                    <span class="text-white font-extrabold text-xl sm:text-2xl tracking-tight">bet</span>
+                    <span class="text-[#ffdf1b] font-extrabold text-xl sm:text-2xl tracking-tight">3v3</span>
                 </div>
                 <span class="hidden sm:inline-block text-[11px] font-semibold uppercase tracking-wider bg-black/25 text-emerald-100 px-2 py-0.5 rounded">
                     P2P • Mundial 26
@@ -137,29 +201,29 @@
             </div>
 
             <!-- Estado de conexión en vivo -->
-            <div class="hidden md:flex items-center space-x-2 text-xs text-emerald-100 bg-black/20 px-3 py-1 rounded-full">
+            <div class="flex items-center space-x-1.5 text-[11px] sm:text-xs text-emerald-100 bg-black/25 px-2.5 py-1 rounded-full">
                 <span id="live-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
-                <span id="live-status-text">Conectando...</span>
+                <span id="live-status-text" class="truncate max-w-[95px] sm:max-w-none">Conectando...</span>
             </div>
 
             <!-- Panel de Cuenta de Usuario -->
-            <div class="flex items-center space-x-2">
+            <div class="flex items-center space-x-1.5 sm:space-x-2">
                 <!-- Sin sesión -->
-                <div id="auth-guest-bar" class="flex items-center space-x-2">
-                    <button onclick="openAuthModal('login')" class="text-xs font-semibold text-white hover:text-[#ffdf1b] px-3 py-1.5 rounded transition">
-                        Iniciar Sesión
+                <div id="auth-guest-bar" class="flex items-center space-x-1.5">
+                    <button onclick="openAuthModal('login')" class="text-xs font-semibold text-white hover:text-[#ffdf1b] px-2.5 py-1.5 rounded transition">
+                        Entrar
                     </button>
-                    <button onclick="openAuthModal('register')" class="text-xs font-bold bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] px-3.5 py-1.5 rounded shadow-sm transition">
-                        Registrarse
+                    <button onclick="openAuthModal('register')" class="text-xs font-bold bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] px-3 py-1.5 rounded shadow-sm transition">
+                        Crear Cuenta
                     </button>
                 </div>
 
                 <!-- Con sesión -->
-                <div id="auth-user-bar" class="hidden flex items-center space-x-2">
-                    <div class="bg-[#004736] border border-emerald-400/30 px-2.5 py-1 rounded flex items-center space-x-2">
-                        <span class="text-[11px] text-emerald-200 hidden sm:inline">Saldo:</span>
-                        <span id="user-balance-display" class="text-sm font-extrabold text-[#ffdf1b]">$0</span>
-                        <button onclick="openDepositModal()" title="Recargar saldo" class="bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] font-extrabold text-[11px] px-1.5 py-0.2 rounded transition">
+                <div id="auth-user-bar" class="hidden flex items-center space-x-1.5 sm:space-x-2">
+                    <div class="bg-[#004736] border border-emerald-400/30 px-2 sm:px-2.5 py-1 rounded flex items-center space-x-1.5 sm:space-x-2">
+                        <span class="text-[11px] text-emerald-200 hidden md:inline">Saldo:</span>
+                        <span id="user-balance-display" class="text-xs sm:text-sm font-extrabold text-[#ffdf1b]">$0</span>
+                        <button onclick="openDepositModal()" title="Recargar saldo" class="bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] font-extrabold text-[10px] sm:text-[11px] px-1.5 py-0.5 rounded transition">
                             + Recargar
                         </button>
                     </div>
@@ -167,15 +231,15 @@
                         <div id="user-name-display" class="text-xs font-bold text-white leading-tight">usuario</div>
                         <button onclick="logoutUser()" class="text-[10px] text-emerald-200 hover:text-white underline">Salir</button>
                     </div>
-                    <button onclick="logoutUser()" class="sm:hidden text-[11px] bg-black/25 text-white px-2.5 py-1.5 rounded font-semibold">
+                    <button onclick="logoutUser()" class="sm:hidden text-[11px] bg-black/25 text-white px-2 py-1.5 rounded font-semibold">
                         Salir
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Barra de Navegación Secundaria -->
-        <nav class="b365-subnav">
+        <!-- Barra de Navegación Secundaria (Desktop / Tablet) -->
+        <nav class="b365-subnav hidden md:block">
             <div class="max-w-7xl mx-auto px-4 flex items-center space-x-6 overflow-x-auto text-xs sm:text-sm">
                 <button onclick="switchView('view-matches')" id="tab-view-matches" class="nav-tab is-active py-3 whitespace-nowrap">
                     Partidos
@@ -204,6 +268,14 @@
                 </button>
             </div>
         </nav>
+
+        <!-- Sub-barra rápida en Celular (Posiciones / Stats / Fase Final / Ranking) -->
+        <div class="b365-subnav md:hidden px-3 py-1.5 flex items-center space-x-2 overflow-x-auto text-[11px]">
+            <button onclick="switchView('view-standings')" id="mchip-view-standings" class="shrink-0 px-2.5 py-1 rounded bg-[#333] text-neutral-200 font-semibold">Posiciones</button>
+            <button onclick="switchView('view-stats')" id="mchip-view-stats" class="shrink-0 px-2.5 py-1 rounded bg-[#333] text-neutral-200 font-semibold">Goleadores / MVP</button>
+            <button onclick="switchView('view-knockout')" id="mchip-view-knockout" class="shrink-0 px-2.5 py-1 rounded bg-[#333] text-neutral-200 font-semibold">Fase Final</button>
+            <button onclick="switchView('view-ranking')" id="mchip-view-ranking" class="shrink-0 px-2.5 py-1 rounded bg-[#333] text-neutral-200 font-semibold">Ranking</button>
+        </div>
     </header>
 
     <!-- Banner Modo Demo (visible solo si Firebase no está configurado) -->
@@ -212,10 +284,10 @@
     </div>
 
     <!-- CONTENIDO PRINCIPAL -->
-    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6">
+    <main class="flex-grow max-w-7xl w-full mx-auto px-3 sm:px-4 pt-4 pb-36 md:py-6">
 
         <!-- Toast de notificaciones -->
-        <div id="toast" class="fixed bottom-5 right-5 z-50 hidden bg-[#111] text-white px-4 py-3 rounded-lg shadow-2xl border-l-4 border-[#ffdf1b] text-xs sm:text-sm font-medium max-w-sm">
+        <div id="toast" class="fixed top-16 md:top-auto md:bottom-5 left-3 right-3 md:left-auto md:right-5 z-50 hidden bg-[#111] text-white px-4 py-3 rounded-lg shadow-2xl border-l-4 border-[#ffdf1b] text-xs sm:text-sm font-medium md:max-w-sm">
             <span id="toast-msg"></span>
         </div>
 
@@ -223,52 +295,70 @@
              VISTA 1: PARTIDOS Y APUESTAS P2P
         =========================================== -->
         <div id="view-matches" class="view-section">
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
 
                 <!-- Columna Principal: Lista de partidos -->
                 <div class="lg:col-span-8 space-y-4">
-                    <!-- Resumen rápido del torneo (igual que index) -->
-                    <div id="summary-strip" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5"></div>
+                    <!-- Bloque Destacado: PARTIDOS EN VIVO AHORA -->
+                    <div id="live-now-section" class="hidden bg-[#262022] border-2 border-rose-500/70 rounded-xl overflow-hidden shadow-lg">
+                        <div class="bg-gradient-to-r from-rose-700 via-rose-600 to-[#027b5b] px-4 py-2.5 flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-white animate-ping"></span>
+                                <span class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-white">En Vivo Ahora • Cuotas en Tiempo Real</span>
+                            </div>
+                            <span id="live-now-count" class="text-[11px] bg-black/30 text-[#ffdf1b] font-bold px-2 py-0.5 rounded">1 en juego</span>
+                        </div>
+                        <div id="live-now-list" class="divide-y divide-[#3d3135]"></div>
+                    </div>
+
+                    <!-- Resumen rápido del torneo -->
+                    <div id="summary-strip" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
 
                     <!-- Barra de filtros de fechas -->
-                    <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                        <div class="flex items-center space-x-2">
-                            <span class="w-2 h-2 rounded-full bg-[#027b5b]"></span>
-                            <span class="text-xs font-bold uppercase tracking-wider text-neutral-300">Jornadas:</span>
+                    <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <span class="w-2 h-2 rounded-full bg-[#027b5b]"></span>
+                                <span class="text-xs font-bold uppercase tracking-wider text-neutral-300">Jornadas:</span>
+                            </div>
+                            <span id="matches-progress-badge" class="sm:hidden bg-[#1e1e1e] border border-[#444] text-emerald-400 text-[11px] font-bold px-2 py-0.5 rounded">0 / 0</span>
                         </div>
                         <div id="rounds-filter-bar" class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0"></div>
                     </div>
 
                     <!-- Explicación corta de cuotas -->
-                    <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-300">
+                    <div class="hidden sm:flex bg-[#282828] border border-[#3a3a3a] rounded-lg px-4 py-2.5 flex-wrap items-center justify-between gap-2 text-xs text-neutral-300">
                         <div>
-                            <span class="text-[#ffdf1b] font-bold">Bet Builder y Combinadas 1v1:</span> Hacé clic en cualquier partido para abrir el <strong>Crear Apuesta</strong> (1X2, Doble Oportunidad, Goles, MVP) o combiná varios partidos en el boleto.
+                            <span class="text-[#ffdf1b] font-bold">Bet Builder y Combinadas 1v1:</span> Tocá cualquier partido para abrir el <strong>Crear Apuesta</strong> (1X2, Doble Oportunidad, Goles, MVP) o combiná varios partidos.
                         </div>
-                        <span id="matches-progress-badge" class="bg-[#1e1e1e] border border-[#444] text-emerald-400 font-bold px-2.5 py-0.5 rounded">0 / 0</span>
+                        <span id="matches-progress-badge-desktop" class="bg-[#1e1e1e] border border-[#444] text-emerald-400 font-bold px-2.5 py-0.5 rounded">0 / 0</span>
                     </div>
 
                     <!-- Contenedor de Partidos -->
                     <div id="matches-list" class="space-y-4"></div>
                 </div>
 
-                <!-- Columna Derecha: Boleto de Apuesta 1v1 (Bet Slip estilo bet365) -->
-                <aside class="lg:col-span-4 lg:sticky lg:top-28 space-y-4">
-                    <div class="bg-[#282828] border border-[#3d3d3d] rounded-lg overflow-hidden shadow-xl">
+                <!-- Columna Derecha (Desktop): Boleto de Apuesta 1v1 -->
+                <aside id="desktop-slip-container" class="hidden lg:block lg:col-span-4 lg:sticky lg:top-28 space-y-4">
+                    <div id="bet-slip-card" class="bg-[#282828] border border-[#3d3d3d] rounded-lg overflow-hidden shadow-xl">
                         <div class="bg-[#027b5b] px-4 py-3 flex items-center justify-between">
                             <div class="flex items-center space-x-2">
                                 <h2 class="text-sm font-bold text-white uppercase tracking-wider">Boleto Desafío 1v1</h2>
                                 <span id="slip-legs-count" class="hidden bg-[#ffdf1b] text-[#111] text-[11px] font-extrabold px-2 py-0.2 rounded-full">1</span>
                             </div>
-                            <button id="slip-clear-all-btn" onclick="clearBetSlip()" class="hidden text-[11px] text-emerald-100 hover:text-white underline">Vaciar</button>
+                            <div class="flex items-center space-x-3">
+                                <button id="slip-clear-all-btn" onclick="clearBetSlip()" class="hidden text-[11px] text-emerald-100 hover:text-white underline">Vaciar</button>
+                                <button onclick="closeMobileSlipDrawer()" class="lg:hidden text-white text-xl leading-none px-1">&times;</button>
+                            </div>
                         </div>
 
                         <!-- Sin selección -->
                         <div id="slip-empty" class="p-6 text-center space-y-2">
-                            <div class="text-neutral-400 text-xs">Hacé clic en un partido para abrir el <strong>Bet Builder</strong> o tocá cualquier cuota (1X2, Doble Oportunidad, Goles, MVP) para armar una apuesta simple o combinada 1v1.</div>
+                            <div class="text-neutral-400 text-xs">Tocá un partido para abrir el <strong>Bet Builder</strong> o elegí cualquier cuota (1X2, Doble Oportunidad, Goles, MVP) para armar tu apuesta simple o combinada 1v1.</div>
                         </div>
 
                         <!-- Con selección -->
-                        <div id="slip-form" class="hidden p-4 space-y-4">
+                        <div id="slip-form" class="hidden p-4 space-y-3.5">
                             <!-- Tipo de boleto (Simple vs Combinada / Bet Builder) -->
                             <div class="flex items-center justify-between bg-[#1f1f1f] border border-[#3a3a3a] rounded px-3 py-2">
                                 <div>
@@ -282,12 +372,12 @@
                             </div>
 
                             <!-- Lista de selecciones del boleto -->
-                            <div id="slip-legs-list" class="space-y-2 max-h-60 overflow-y-auto pr-0.5"></div>
+                            <div id="slip-legs-list" class="space-y-2 max-h-48 overflow-y-auto pr-0.5"></div>
 
                             <!-- Selección de Rival 1v1 -->
-                            <div class="space-y-1.5">
+                            <div class="space-y-1">
                                 <label for="slip-rival-select" class="block text-xs text-neutral-300 font-semibold">¿A quién le mandás el desafío 1v1?</label>
-                                <select id="slip-rival-select" onchange="updateSlipCalc()" class="w-full bg-[#1a1a1a] border border-[#4a4a4a] focus:border-[#ffdf1b] rounded px-3 py-2 text-sm font-bold text-white outline-none">
+                                <select id="slip-rival-select" onchange="updateSlipCalc()" class="w-full bg-[#1a1a1a] border border-[#4a4a4a] focus:border-[#ffdf1b] rounded px-3 py-2.5 text-sm font-bold text-white outline-none">
                                     <option value="">-- Elegir usuario rival --</option>
                                 </select>
                             </div>
@@ -298,17 +388,17 @@
                                     <label for="slip-stake" class="text-neutral-300 font-semibold">Tu apuesta ($)</label>
                                     <span class="text-neutral-400">Disponible: <strong id="slip-avail-balance" class="text-white">$0</strong></span>
                                 </div>
-                                <input type="number" id="slip-stake" min="10" step="10" value="100" oninput="updateSlipCalc()" class="w-full bg-[#1a1a1a] border border-[#4a4a4a] focus:border-[#ffdf1b] rounded px-3 py-2 text-sm font-bold text-white outline-none">
+                                <input type="number" id="slip-stake" min="10" step="10" value="100" oninput="updateSlipCalc()" class="w-full bg-[#1a1a1a] border border-[#4a4a4a] focus:border-[#ffdf1b] rounded px-3 py-2.5 text-base font-bold text-white outline-none">
                                 <div class="grid grid-cols-4 gap-1.5">
-                                    <button type="button" onclick="setQuickStake(50)" class="bg-[#383838] hover:bg-[#484848] text-xs font-semibold py-1 rounded text-neutral-200">$50</button>
-                                    <button type="button" onclick="setQuickStake(100)" class="bg-[#383838] hover:bg-[#484848] text-xs font-semibold py-1 rounded text-neutral-200">$100</button>
-                                    <button type="button" onclick="setQuickStake(250)" class="bg-[#383838] hover:bg-[#484848] text-xs font-semibold py-1 rounded text-neutral-200">$250</button>
-                                    <button type="button" onclick="setQuickStake(500)" class="bg-[#383838] hover:bg-[#484848] text-xs font-semibold py-1 rounded text-neutral-200">$500</button>
+                                    <button type="button" onclick="setQuickStake(50)" class="bg-[#383838] hover:bg-[#484848] text-xs font-semibold py-2 rounded text-neutral-200">$50</button>
+                                    <button type="button" onclick="setQuickStake(100)" class="bg-[#383838] hover:bg-[#484848] text-xs font-semibold py-2 rounded text-neutral-200">$100</button>
+                                    <button type="button" onclick="setQuickStake(250)" class="bg-[#383838] hover:bg-[#484848] text-xs font-semibold py-2 rounded text-neutral-200">$250</button>
+                                    <button type="button" onclick="setQuickStake(500)" class="bg-[#383838] hover:bg-[#484848] text-xs font-semibold py-2 rounded text-neutral-200">$500</button>
                                 </div>
                             </div>
 
                             <!-- Desglose 1v1 -->
-                            <div class="bg-[#1f1f1f] rounded p-3 space-y-1.5 text-xs border border-[#383838]">
+                            <div class="bg-[#1f1f1f] rounded p-3 space-y-1 text-xs border border-[#383838]">
                                 <div class="flex justify-between">
                                     <span class="text-neutral-400">El rival deberá poner:</span>
                                     <span id="slip-counter-stake" class="font-bold text-neutral-200">$100</span>
@@ -323,12 +413,9 @@
                                 </div>
                             </div>
 
-                            <button onclick="placeP2PBet()" class="w-full bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] font-extrabold text-sm py-2.5 rounded shadow transition">
+                            <button onclick="placeP2PBet()" class="w-full bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] font-extrabold text-sm py-3 rounded shadow transition">
                                 Enviar Desafío 1v1
                             </button>
-                            <p class="text-[11px] text-neutral-400 text-center leading-snug">
-                                En combinadas, deben cumplirse <strong>todas</strong> tus selecciones para ganar el pozo. Si falla al menos una, gana el rival.
-                            </p>
                         </div>
                     </div>
 
@@ -539,7 +626,7 @@
                         <div class="text-[10px] uppercase text-neutral-400">Cuota Partido</div>
                         <div id="bb-combined-odd" class="text-lg font-extrabold text-[#ffdf1b]">1.00</div>
                     </div>
-                    <button onclick="closeBetBuilderModal()" class="bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] font-extrabold text-xs sm:text-sm px-4 py-2.5 rounded shadow transition">
+                    <button onclick="closeBetBuilderModal(true)" class="bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] font-extrabold text-xs sm:text-sm px-4 py-2.5 rounded shadow transition">
                         Listo • Ir al Boleto
                     </button>
                 </div>
@@ -548,34 +635,54 @@
     </div>
 
     <!-- ==========================================
-         MODAL: RECARGAR SALDO
+         BARRA FLOTANTE DE BOLETO Y NAVEGACIÓN MÓVIL
     =========================================== -->
-    <div id="deposit-modal" class="fixed inset-0 bg-black/75 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-[#282828] border border-[#444] rounded-xl max-w-sm w-full overflow-hidden shadow-2xl">
-            <div class="bg-[#027b5b] px-5 py-3.5 flex items-center justify-between">
-                <h3 class="text-sm font-bold text-white uppercase tracking-wider">Recargar Saldo</h3>
-                <button onclick="closeDepositModal()" class="text-emerald-100 hover:text-white text-lg leading-none">&times;</button>
+    <!-- Píldora flotante del boleto en celular cuando hay selecciones cargadas -->
+    <div id="mobile-slip-bar" class="lg:hidden fixed bottom-14 inset-x-0 z-30 px-3 pb-2 hidden">
+        <button onclick="openMobileSlipDrawer()" class="w-full bg-[#027b5b] border-2 border-[#ffdf1b] text-white rounded-xl px-4 py-2.5 shadow-2xl flex items-center justify-between">
+            <div class="flex items-center space-x-2.5 min-w-0">
+                <span id="mobile-slip-count" class="bg-[#ffdf1b] text-[#111] font-extrabold text-xs w-6 h-6 rounded-full flex items-center justify-center shrink-0">1</span>
+                <div class="text-left min-w-0">
+                    <div id="mobile-slip-title" class="text-xs font-extrabold uppercase text-white leading-tight">Ver Boleto 1v1</div>
+                    <div id="mobile-slip-sub" class="text-[11px] text-emerald-100 truncate">Tocá para elegir rival y monto</div>
+                </div>
             </div>
-            <form onsubmit="handleDepositSubmit(event)" class="p-5 space-y-4">
-                <div class="text-xs text-neutral-300">
-                    Saldo actual: <strong id="deposit-current-bal" class="text-[#ffdf1b]">$0</strong>
-                </div>
-                <div class="space-y-1.5">
-                    <label for="deposit-amount" class="text-xs font-semibold text-neutral-300">Monto a agregar ($)</label>
-                    <input type="number" id="deposit-amount" required min="10" step="10" value="500" class="w-full bg-[#1a1a1a] border border-[#4a4a4a] focus:border-[#ffdf1b] rounded px-3 py-2 text-sm font-bold text-white outline-none">
-                    <div class="grid grid-cols-4 gap-1.5 pt-1">
-                        <button type="button" onclick="document.getElementById('deposit-amount').value=200" class="bg-[#383838] hover:bg-[#484848] text-xs font-semibold py-1 rounded text-neutral-200">+$200</button>
-                        <button type="button" onclick="document.getElementById('deposit-amount').value=500" class="bg-[#383838] hover:bg-[#484848] text-xs font-semibold py-1 rounded text-neutral-200">+$500</button>
-                        <button type="button" onclick="document.getElementById('deposit-amount').value=1000" class="bg-[#383838] hover:bg-[#484848] text-xs font-semibold py-1 rounded text-neutral-200">+$1.000</button>
-                        <button type="button" onclick="document.getElementById('deposit-amount').value=2500" class="bg-[#383838] hover:bg-[#484848] text-xs font-semibold py-1 rounded text-neutral-200">+$2.500</button>
-                    </div>
-                </div>
-                <button type="submit" class="w-full bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] font-extrabold text-sm py-2.5 rounded shadow transition">
-                    Confirmar Recarga
-                </button>
-            </form>
-        </div>
+            <div class="text-right shrink-0 pl-2">
+                <div class="text-[9px] uppercase text-emerald-200">Cuota</div>
+                <div id="mobile-slip-odd" class="text-base font-extrabold text-[#ffdf1b] leading-none">2.00</div>
+            </div>
+        </button>
     </div>
+
+    <!-- Drawer modal del boleto en celular -->
+    <div id="mobile-slip-drawer" class="lg:hidden fixed inset-0 bg-black/80 z-50 hidden flex flex-col justify-end">
+        <div id="mobile-slip-slot" class="w-full max-h-[88vh] overflow-y-auto rounded-t-2xl"></div>
+    </div>
+
+    <!-- Barra inferior fija estilo app para usar con una mano en celular -->
+    <nav class="md:hidden fixed bottom-0 inset-x-0 z-30 bg-[#181818] border-t border-[#363636] h-14 grid grid-cols-5 text-[10px] font-bold">
+        <button onclick="switchView('view-matches')" id="mnav-view-matches" class="mobile-nav-btn is-active flex flex-col items-center justify-center space-y-0.5">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+            <span>Partidos</span>
+        </button>
+        <button onclick="switchView('view-specials')" id="mnav-view-specials" class="mobile-nav-btn flex flex-col items-center justify-center space-y-0.5">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+            <span>Especiales</span>
+        </button>
+        <button onclick="switchView('view-market')" id="mnav-view-market" class="mobile-nav-btn relative flex flex-col items-center justify-center space-y-0.5">
+            <span id="mobile-open-bets-badge" class="hidden absolute top-1 right-4 bg-[#ffdf1b] text-[#111] text-[9px] font-extrabold px-1.5 rounded-full">0</span>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+            <span>1v1</span>
+        </button>
+        <button onclick="switchView('view-mybets')" id="mnav-view-mybets" class="mobile-nav-btn flex flex-col items-center justify-center space-y-0.5">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+            <span>Mis Apuestas</span>
+        </button>
+        <button onclick="switchView('view-standings')" id="mnav-view-standings" class="mobile-nav-btn flex flex-col items-center justify-center space-y-0.5">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+            <span>Tabla</span>
+        </button>
+    </nav>
 
     <!-- ==========================================
          MODAL: INICIAR SESIÓN / REGISTRARSE
@@ -616,6 +723,36 @@
 
                 <button type="submit" id="auth-submit-btn" class="w-full bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] font-extrabold text-sm py-2.5 rounded shadow transition">
                     Entrar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         MODAL: RECARGAR SALDO
+    =========================================== -->
+    <div id="deposit-modal" class="fixed inset-0 bg-black/75 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#282828] border border-[#444] rounded-xl max-w-sm w-full overflow-hidden shadow-2xl">
+            <div class="bg-[#027b5b] px-5 py-3.5 flex items-center justify-between">
+                <h3 class="text-sm font-bold text-white uppercase tracking-wider">Recargar Saldo</h3>
+                <button onclick="closeDepositModal()" class="text-emerald-100 hover:text-white text-lg leading-none">&times;</button>
+            </div>
+            <form onsubmit="handleDepositSubmit(event)" class="p-5 space-y-4">
+                <div class="text-xs text-neutral-300">
+                    Saldo actual: <strong id="deposit-current-bal" class="text-[#ffdf1b]">$0</strong>
+                </div>
+                <div class="space-y-1.5">
+                    <label for="deposit-amount" class="text-xs font-semibold text-neutral-300">Monto a agregar ($)</label>
+                    <input type="number" id="deposit-amount" min="10" step="10" value="500" required class="w-full bg-[#1a1a1a] border border-[#4a4a4a] focus:border-[#ffdf1b] rounded px-3 py-2 text-sm font-bold text-white outline-none">
+                    <div class="grid grid-cols-4 gap-1.5">
+                        <button type="button" onclick="document.getElementById('deposit-amount').value=200" class="bg-[#383838] hover:bg-[#484848] text-[11px] font-semibold py-1 rounded text-neutral-200">+$200</button>
+                        <button type="button" onclick="document.getElementById('deposit-amount').value=500" class="bg-[#383838] hover:bg-[#484848] text-[11px] font-semibold py-1 rounded text-neutral-200">+$500</button>
+                        <button type="button" onclick="document.getElementById('deposit-amount').value=1000" class="bg-[#383838] hover:bg-[#484848] text-[11px] font-semibold py-1 rounded text-neutral-200">+$1.000</button>
+                        <button type="button" onclick="document.getElementById('deposit-amount').value=2500" class="bg-[#383838] hover:bg-[#484848] text-[11px] font-semibold py-1 rounded text-neutral-200">+$2.500</button>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] font-extrabold text-sm py-2.5 rounded shadow transition">
+                    Confirmar Recarga
                 </button>
             </form>
         </div>
@@ -778,8 +915,10 @@
                             matches: Array.isArray(data.matches) ? data.matches : [],
                             knockoutMatches: Array.isArray(data.knockoutMatches) ? data.knockoutMatches : []
                         };
+                        syncSlipOddsWithLiveMatch();
                         checkAndSettleFinishedMatches();
                         renderAll();
+                        if (activeBuilderMatchId) renderBetBuilderModal();
                     }
                 }, (err) => {
                     console.error('Error leyendo torneo3v3:', err);
@@ -1099,6 +1238,43 @@
 
         const clampOdd = (val, min, max) => Number(Math.max(min, Math.min(max, val)).toFixed(2));
 
+        // Actualiza las cuotas de las selecciones que ya están en el boleto cuando cambia el marcador en vivo
+        function syncSlipOddsWithLiveMatch() {
+            if (!activeSlipLegs.length) return;
+            const allMatches = [
+                ...tournamentState.matches.map(m => ({ ...m, _ko: false })),
+                ...tournamentState.knockoutMatches.map(m => ({ ...m, _ko: true }))
+            ];
+            const byId = {};
+            allMatches.forEach(m => { byId[m.id] = m; });
+
+            activeSlipLegs = activeSlipLegs.filter(leg => {
+                if (leg.category === 'SPECIAL') return true;
+                const m = byId[leg.matchId];
+                if (!m || m.played) return false;
+
+                if (leg.marketType === '1X2') {
+                    const o = computeMatchOdds(m, m._ko);
+                    leg.odd = leg.pick === 'HOME' ? o.home : (leg.pick === 'AWAY' ? o.away : o.draw);
+                } else {
+                    const p = computeMatchPropOdds(m);
+                    if (leg.marketType === 'DOUBLE_CHANCE') {
+                        leg.odd = leg.pick === '1X' ? p.doubleChance.odd1X : (leg.pick === 'X2' ? p.doubleChance.oddX2 : p.doubleChance.odd12);
+                    } else if (leg.marketType === 'TOTAL_GOALS') {
+                        const found = p.lines.find(l => l.line === leg.line);
+                        if (found) leg.odd = leg.pick === 'OVER' ? found.overOdd : found.underOdd;
+                    } else if (leg.marketType === 'PLAYER_GOALS') {
+                        const po = p.playersOdds.find(x => x.player.id === leg.targetId);
+                        if (po) leg.odd = leg.line >= 1.5 ? po.odd2 : po.odd1;
+                    } else if (leg.marketType === 'MATCH_MVP') {
+                        const po = p.playersOdds.find(x => x.player.id === leg.targetId);
+                        if (po) leg.odd = po.oddMvp;
+                    }
+                }
+                return true;
+            });
+        }
+
         /**
          * Calcula cuotas P2P justas (sin margen de la casa):
          * - Usa historial desde el 1° partido jugado (si uno ganó 2 y otro perdió 2, ya ajusta fuerte)
@@ -1112,7 +1288,7 @@
             const liveHome = Number(match.homeScore) || 0;
             const liveAway = Number(match.awayScore) || 0;
             const liveGoalsTotal = liveHome + liveAway;
-            const isLive = !match.played && (liveGoalsTotal > 0 || typeof match.liveSecondsLeft === 'number');
+            const isLive = !match.played && Boolean(match.isLive || liveGoalsTotal > 0 || typeof match.liveSecondsLeft === 'number');
             const hasHistory = (h && h.pj >= 1) || (a && a.pj >= 1);
 
             // Solo si ambos tienen 0 partidos jugados y el partido va 0-0 sin empezar, pago x2.00
@@ -1196,17 +1372,10 @@
             const secsLeft = typeof match.liveSecondsLeft === 'number' ? match.liveSecondsLeft : 600;
             const remainingFraction = Math.max(0.15, Math.min(1, secsLeft / 600));
             const hasHistory = (h && h.pj >= 1) || (a && a.pj >= 1);
-            const isLive = !match.played && (liveGoalsNow > 0 || typeof match.liveSecondsLeft === 'number');
+            const isLive = !match.played && Boolean(match.isLive || liveGoalsNow > 0 || typeof match.liveSecondsLeft === 'number');
 
-            // Goles esperados para todo el partido (~3.5 en 3v3)
-            let fullMatchExpected = 3.5;
-            if (hasHistory) {
-                const hFor = h && h.pj > 0 ? h.gf / h.pj : 1.75;
-                const hAg = h && h.pj > 0 ? h.gc / h.pj : 1.75;
-                const aFor = a && a.pj > 0 ? a.gf / a.pj : 1.75;
-                const aAg = a && a.pj > 0 ? a.gc / a.pj : 1.75;
-                fullMatchExpected = Math.max(1.5, Math.min(8.0, ((hFor + aAg) / 2) + ((aFor + hAg) / 2)));
-            }
+            const avgGoalsTeam = (s) => (s && s.pj > 0 ? (s.gf + s.gc) / s.pj : 4.2);
+            const fullMatchExpected = (avgGoalsTeam(h) + avgGoalsTeam(a)) / 2;
 
             // Goles esperados restantes a partir del marcador actual
             const remainingExpected = fullMatchExpected * remainingFraction;
@@ -1793,12 +1962,15 @@
             const form = document.getElementById('slip-form');
             const badge = document.getElementById('slip-legs-count');
             const clearBtn = document.getElementById('slip-clear-all-btn');
+            const mobileBar = document.getElementById('mobile-slip-bar');
 
             if (!activeSlipLegs.length) {
                 empty.classList.remove('hidden');
                 form.classList.add('hidden');
                 if (badge) badge.classList.add('hidden');
                 if (clearBtn) clearBtn.classList.add('hidden');
+                if (mobileBar) mobileBar.classList.add('hidden');
+                closeMobileSlipDrawer();
                 return;
             }
 
@@ -1815,6 +1987,18 @@
             const isParlay = activeSlipLegs.length > 1;
             const sameMatch = isParlay && new Set(activeSlipLegs.map(l => l.matchId)).size === 1;
             const combinedOdd = computeCombinedOdd(activeSlipLegs);
+
+            if (mobileBar) {
+                mobileBar.classList.remove('hidden');
+                document.getElementById('mobile-slip-count').textContent = activeSlipLegs.length;
+                document.getElementById('mobile-slip-title').textContent = !isParlay
+                    ? 'Ver Boleto Simple'
+                    : sameMatch
+                        ? `Bet Builder (${activeSlipLegs.length})`
+                        : `Combinada (${activeSlipLegs.length})`;
+                document.getElementById('mobile-slip-sub').textContent = activeSlipLegs.map(l => l.pickLabel).join(' + ');
+                document.getElementById('mobile-slip-odd').textContent = combinedOdd.toFixed(2);
+            }
 
             document.getElementById('slip-type-title').textContent = !isParlay
                 ? 'Apuesta Simple'
@@ -2235,6 +2419,20 @@
             const activeTab = document.getElementById('tab-' + viewId);
             if (activeTab) activeTab.classList.add('is-active');
 
+            document.querySelectorAll('.mobile-nav-btn').forEach(b => b.classList.remove('is-active'));
+            const activeMTab = document.getElementById('mnav-' + viewId);
+            if (activeMTab) activeMTab.classList.add('is-active');
+
+            ['view-standings', 'view-stats', 'view-knockout', 'view-ranking'].forEach(id => {
+                const chip = document.getElementById('mchip-' + id);
+                if (chip) {
+                    chip.className = id === viewId
+                        ? 'shrink-0 px-2.5 py-1 rounded bg-[#027b5b] text-white font-bold'
+                        : 'shrink-0 px-2.5 py-1 rounded bg-[#333] text-neutral-200 font-semibold';
+                }
+            });
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             renderAll();
         }
 
@@ -2307,13 +2505,45 @@
         }
 
         /* --- Partidos y Cuotas --- */
+        function renderLiveNowSection(statsMap, openBets) {
+            const section = document.getElementById('live-now-section');
+            const listEl = document.getElementById('live-now-list');
+            const countEl = document.getElementById('live-now-count');
+            if (!section || !listEl) return;
+
+            const liveRegular = tournamentState.matches
+                .filter(m => !m.played && (m.isLive || (Number(m.homeScore) || 0) + (Number(m.awayScore) || 0) > 0))
+                .map(m => ({ m, ko: false }));
+            const liveKo = tournamentState.knockoutMatches
+                .filter(m => !m.played && (m.isLive || (Number(m.homeScore) || 0) + (Number(m.awayScore) || 0) > 0))
+                .map(m => ({ m, ko: true }));
+
+            const allLive = [...liveRegular, ...liveKo];
+            if (allLive.length === 0) {
+                section.classList.add('hidden');
+                listEl.innerHTML = '';
+                return;
+            }
+
+            section.classList.remove('hidden');
+            if (countEl) countEl.textContent = `${allLive.length} en juego`;
+            listEl.innerHTML = allLive.map(x => renderBet365MatchRow(x.m, x.ko, statsMap, openBets)).join('');
+        }
+
         function renderMatches() {
             const listEl = document.getElementById('matches-list');
             const barEl = document.getElementById('rounds-filter-bar');
             const badge = document.getElementById('matches-progress-badge');
+            const badgeDesktop = document.getElementById('matches-progress-badge-desktop');
 
             const playedCount = tournamentState.matches.filter(m => m.played).length;
-            if (badge) badge.textContent = `${playedCount} / ${tournamentState.matches.length} Jugados`;
+            const progText = `${playedCount} / ${tournamentState.matches.length} Jugados`;
+            if (badge) badge.textContent = progText;
+            if (badgeDesktop) badgeDesktop.textContent = progText;
+
+            const statsMap = getAllTeamsStatsMap();
+            const openBets = Object.values(betsMap).filter(b => b.status === 'OPEN');
+            renderLiveNowSection(statsMap, openBets);
 
             if (tournamentState.matches.length === 0) {
                 if (barEl) barEl.innerHTML = '';
@@ -2330,17 +2560,14 @@
             if (selectedRoundFilter !== 'ALL' && !rounds.includes(selectedRoundFilter)) selectedRoundFilter = 'ALL';
 
             barEl.innerHTML = `
-                <button onclick="setRoundFilter('ALL')" class="shrink-0 text-xs px-3 py-1 rounded font-bold transition ${selectedRoundFilter === 'ALL' ? 'bg-[#027b5b] text-white' : 'bg-[#383838] text-neutral-300 hover:bg-[#444]'}">
+                <button onclick="setRoundFilter('ALL')" class="shrink-0 text-xs px-3 py-1.5 rounded font-bold transition ${selectedRoundFilter === 'ALL' ? 'bg-[#027b5b] text-white' : 'bg-[#383838] text-neutral-300 hover:bg-[#444]'}">
                     Todas
                 </button>
             ` + rounds.map(r => `
-                <button onclick="setRoundFilter(${r})" class="shrink-0 text-xs px-3 py-1 rounded font-bold transition ${selectedRoundFilter === r ? 'bg-[#ffdf1b] text-[#111]' : 'bg-[#383838] text-neutral-300 hover:bg-[#444]'}">
+                <button onclick="setRoundFilter(${r})" class="shrink-0 text-xs px-3 py-1.5 rounded font-bold transition ${selectedRoundFilter === r ? 'bg-[#ffdf1b] text-[#111]' : 'bg-[#383838] text-neutral-300 hover:bg-[#444]'}">
                     Fecha ${r}
                 </button>
             `).join('');
-
-            const statsMap = getAllTeamsStatsMap();
-            const openBets = Object.values(betsMap).filter(b => b.status === 'OPEN');
 
             const filtered = selectedRoundFilter === 'ALL'
                 ? tournamentState.matches
@@ -2369,6 +2596,16 @@
             }).join('');
         }
 
+        function formatLiveGoalScorers(m, team) {
+            if (!m || !m.goals || !team || !Array.isArray(team.players)) return '';
+            const scorers = [];
+            team.players.forEach(p => {
+                const g = m.goals[p.id] || 0;
+                if (g > 0) scorers.push(g > 1 ? `${escHtml(p.name)} (${g})` : escHtml(p.name));
+            });
+            return scorers.length ? `<div class="text-[10px] text-emerald-300 truncate">⚽ ${scorers.join(', ')}</div>` : '';
+        }
+
         function renderBet365MatchRow(m, isKnockout, statsMap, openBets) {
             const home = getTeam(m.homeId);
             const away = getTeam(m.awayId);
@@ -2382,9 +2619,12 @@
             const matchLegsCount = activeSlipLegs.filter(l => l.matchId === m.id).length;
 
             const isSel = (pick) => isLegInSlip(m.id, '1X2', pick) ? 'is-active' : '';
+            const liveBadgeText = m.liveMinuteLabel && m.liveMinuteLabel !== 'EN VIVO'
+                ? `● EN VIVO ${escHtml(m.liveMinuteLabel)}`
+                : '● EN VIVO';
 
             return `
-                <div class="p-3.5 hover:bg-[#2e2e2e] transition space-y-2">
+                <div class="p-3.5 hover:bg-[#2e2e2e] transition space-y-2 ${odds.isLive ? 'live-match-card bg-[#292224]' : ''}">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <!-- Equipos (Clic abre el Bet Builder estilo bet365) -->
                         <div onclick="${!m.played ? `openBetBuilderModal('${m.id}', ${isKnockout})` : ''}" class="flex-1 min-w-0 space-y-1.5 ${!m.played ? 'cursor-pointer group' : ''}">
@@ -2393,60 +2633,66 @@
                                 ${m.played
                                     ? `<span class="bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.2 rounded">FINALIZADO</span>`
                                     : odds.isLive
-                                        ? `<span class="bg-rose-500/25 text-rose-300 font-extrabold px-1.5 py-0.2 rounded animate-pulse">● EN VIVO</span>`
+                                        ? `<span class="bg-rose-600 text-white font-extrabold px-2 py-0.5 rounded animate-pulse">${liveBadgeText}</span>`
                                         : `<span class="bg-amber-500/15 text-[#ffdf1b] font-bold px-1.5 py-0.2 rounded">${odds.isDynamic ? 'CUOTA DINÁMICA' : 'CUOTA x2'}</span>`
                                 }
                                 ${!m.played
-                                    ? `<span class="bg-[#027b5b]/30 group-hover:bg-[#027b5b] text-emerald-300 group-hover:text-white border border-emerald-500/40 font-bold px-2 py-0.2 rounded transition">+ Crear Apuesta (Bet Builder) &rsaquo;</span>`
+                                    ? `<span class="bg-[#027b5b]/30 group-hover:bg-[#027b5b] text-emerald-300 group-hover:text-white border border-emerald-500/40 font-bold px-2 py-0.5 rounded transition">+ Bet Builder &rsaquo;</span>`
                                     : ''
                                 }
                                 ${matchLegsCount > 0
-                                    ? `<span class="bg-[#ffdf1b] text-[#111] font-extrabold px-1.5 py-0.2 rounded">${matchLegsCount} en boleto</span>`
+                                    ? `<span class="bg-[#ffdf1b] text-[#111] font-extrabold px-1.5 py-0.5 rounded">${matchLegsCount} en boleto</span>`
                                     : ''
                                 }
                                 ${!m.played && matchOpenBets.length > 0
-                                    ? `<button onclick="event.stopPropagation(); switchView('view-market')" class="bg-[#027b5b] text-white font-bold px-1.5 py-0.2 rounded hover:bg-emerald-600">${matchOpenBets.length} desafío${matchOpenBets.length > 1 ? 's' : ''}</button>`
+                                    ? `<button onclick="event.stopPropagation(); switchView('view-market')" class="bg-[#027b5b] text-white font-bold px-1.5 py-0.5 rounded hover:bg-emerald-600">${matchOpenBets.length} desafío${matchOpenBets.length > 1 ? 's' : ''}</button>`
                                     : ''
                                 }
                             </div>
 
                             <!-- Local -->
                             <div class="flex items-center justify-between pr-2">
-                                <div class="flex items-center space-x-2 min-w-0">
-                                    ${flagMarkup(home)}
-                                    <span class="text-sm font-bold text-white group-hover:text-[#ffdf1b] transition truncate">${escHtml(home.name)}</span>
-                                    ${hPos ? `<span class="text-[10px] text-neutral-400 font-semibold">${hPos}°</span>` : ''}
+                                <div class="min-w-0">
+                                    <div class="flex items-center space-x-2 min-w-0">
+                                        ${flagMarkup(home)}
+                                        <span class="text-sm sm:text-base font-bold text-white group-hover:text-[#ffdf1b] transition truncate">${escHtml(home.name)}</span>
+                                        ${hPos ? `<span class="text-[10px] text-neutral-400 font-semibold">${hPos}°</span>` : ''}
+                                    </div>
+                                    ${(m.played || odds.isLive) ? formatLiveGoalScorers(m, home) : ''}
                                 </div>
-                                ${(m.played || odds.isLive) ? `<span class="font-sport text-xl font-bold ${m.homeScore > m.awayScore ? 'text-[#ffdf1b]' : 'text-neutral-300'}">${m.homeScore}</span>` : ''}
+                                ${(m.played || odds.isLive) ? `<span class="font-sport text-2xl font-bold ${m.homeScore > m.awayScore ? 'text-[#ffdf1b]' : 'text-white'}">${m.homeScore || 0}</span>` : ''}
                             </div>
 
                             <!-- Visitante -->
                             <div class="flex items-center justify-between pr-2">
-                                <div class="flex items-center space-x-2 min-w-0">
-                                    ${flagMarkup(away)}
-                                    <span class="text-sm font-bold text-white group-hover:text-[#ffdf1b] transition truncate">${escHtml(away.name)}</span>
-                                    ${aPos ? `<span class="text-[10px] text-neutral-400 font-semibold">${aPos}°</span>` : ''}
+                                <div class="min-w-0">
+                                    <div class="flex items-center space-x-2 min-w-0">
+                                        ${flagMarkup(away)}
+                                        <span class="text-sm sm:text-base font-bold text-white group-hover:text-[#ffdf1b] transition truncate">${escHtml(away.name)}</span>
+                                        ${aPos ? `<span class="text-[10px] text-neutral-400 font-semibold">${aPos}°</span>` : ''}
+                                    </div>
+                                    ${(m.played || odds.isLive) ? formatLiveGoalScorers(m, away) : ''}
                                 </div>
-                                ${(m.played || odds.isLive) ? `<span class="font-sport text-xl font-bold ${m.awayScore > m.homeScore ? 'text-[#ffdf1b]' : 'text-neutral-300'}">${m.awayScore}</span>` : ''}
+                                ${(m.played || odds.isLive) ? `<span class="font-sport text-2xl font-bold ${m.awayScore > m.homeScore ? 'text-[#ffdf1b]' : 'text-white'}">${m.awayScore || 0}</span>` : ''}
                             </div>
                         </div>
 
                         <!-- Botones rápidos de Cuotas (1 - X - 2) -->
                         ${!m.played ? `
-                            <div class="grid ${isKnockout ? 'grid-cols-2' : 'grid-cols-3'} gap-2 sm:w-60 shrink-0">
-                                <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'HOME')" class="odd-btn ${isSel('HOME')} rounded py-2 px-2 flex flex-col items-center justify-center">
+                            <div class="grid ${isKnockout ? 'grid-cols-2' : 'grid-cols-3'} gap-2 w-full sm:w-60 shrink-0">
+                                <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'HOME')" class="odd-btn ${isSel('HOME')} rounded-lg py-2 px-2 flex flex-col items-center justify-center">
                                     <span class="text-[10px] opacity-75 font-semibold">${escHtml(home.code)}</span>
-                                    <span class="odd-val text-sm">${odds.home.toFixed(2)}</span>
+                                    <span class="odd-val text-sm sm:text-base">${odds.home.toFixed(2)}</span>
                                 </button>
                                 ${!isKnockout ? `
-                                    <button onclick="selectBetOutcome('${m.id}', false, 'DRAW')" class="odd-btn ${isSel('DRAW')} rounded py-2 px-2 flex flex-col items-center justify-center">
+                                    <button onclick="selectBetOutcome('${m.id}', false, 'DRAW')" class="odd-btn ${isSel('DRAW')} rounded-lg py-2 px-2 flex flex-col items-center justify-center">
                                         <span class="text-[10px] opacity-75 font-semibold">EMP</span>
-                                        <span class="odd-val text-sm">${odds.draw.toFixed(2)}</span>
+                                        <span class="odd-val text-sm sm:text-base">${odds.draw.toFixed(2)}</span>
                                     </button>
                                 ` : ''}
-                                <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'AWAY')" class="odd-btn ${isSel('AWAY')} rounded py-2 px-2 flex flex-col items-center justify-center">
+                                <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'AWAY')" class="odd-btn ${isSel('AWAY')} rounded-lg py-2 px-2 flex flex-col items-center justify-center">
                                     <span class="text-[10px] opacity-75 font-semibold">${escHtml(away.code)}</span>
-                                    <span class="odd-val text-sm">${odds.away.toFixed(2)}</span>
+                                    <span class="odd-val text-sm sm:text-base">${odds.away.toFixed(2)}</span>
                                 </button>
                             </div>
                         ` : `
@@ -2539,6 +2785,11 @@
                 : [];
 
             document.getElementById('open-bets-badge').textContent = incomingForMe.length;
+            const mobileBadge = document.getElementById('mobile-open-bets-badge');
+            if (mobileBadge) {
+                mobileBadge.textContent = incomingForMe.length;
+                mobileBadge.classList.toggle('hidden', incomingForMe.length === 0);
+            }
 
             // Mini lista lateral (muestra los desafíos 1v1 recibidos)
             const mini = document.getElementById('mini-open-bets');
