@@ -155,10 +155,13 @@
                 </div>
 
                 <!-- Con sesión -->
-                <div id="auth-user-bar" class="hidden flex items-center space-x-2.5">
-                    <div class="bg-[#004736] border border-emerald-400/30 px-3 py-1 rounded flex items-center space-x-2">
+                <div id="auth-user-bar" class="hidden flex items-center space-x-2">
+                    <div class="bg-[#004736] border border-emerald-400/30 px-2.5 py-1 rounded flex items-center space-x-2">
                         <span class="text-[11px] text-emerald-200 hidden sm:inline">Saldo:</span>
-                        <span id="user-balance-display" class="text-sm font-extrabold text-[#ffdf1b]">$1.000</span>
+                        <span id="user-balance-display" class="text-sm font-extrabold text-[#ffdf1b]">$0</span>
+                        <button onclick="openDepositModal()" title="Recargar saldo" class="bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] font-extrabold text-[11px] px-1.5 py-0.2 rounded transition">
+                            + Recargar
+                        </button>
                     </div>
                     <div class="text-right hidden sm:block">
                         <div id="user-name-display" class="text-xs font-bold text-white leading-tight">usuario</div>
@@ -175,10 +178,13 @@
         <nav class="b365-subnav">
             <div class="max-w-7xl mx-auto px-4 flex items-center space-x-6 overflow-x-auto text-xs sm:text-sm">
                 <button onclick="switchView('view-matches')" id="tab-view-matches" class="nav-tab is-active py-3 whitespace-nowrap">
-                    Partidos y Apuestas
+                    Partidos
+                </button>
+                <button onclick="switchView('view-specials')" id="tab-view-specials" class="nav-tab py-3 whitespace-nowrap">
+                    Apuestas Especiales
                 </button>
                 <button onclick="switchView('view-market')" id="tab-view-market" class="nav-tab py-3 whitespace-nowrap flex items-center space-x-1.5">
-                    <span>Desafíos Abiertos</span>
+                    <span>Desafíos 1v1</span>
                     <span id="open-bets-badge" class="bg-[#ffdf1b] text-[#111] text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">0</span>
                 </button>
                 <button onclick="switchView('view-mybets')" id="tab-view-mybets" class="nav-tab py-3 whitespace-nowrap">
@@ -236,7 +242,7 @@
                     <!-- Explicación corta de cuotas -->
                     <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-300">
                         <div>
-                            <span class="text-[#ffdf1b] font-bold">Sistema P2P:</span> Apostás contra otros usuarios. En los primeros partidos la cuota es <strong class="text-white">2.00</strong>; con 2+ partidos jugados se calcula automáticamente según la tabla.
+                            <span class="text-[#ffdf1b] font-bold">Desafíos Directos 1v1:</span> Elegí cualquier cuota (1X2, +Goles o Goles de Jugador) y mandale la apuesta directa a otro usuario registrado.
                         </div>
                         <span id="matches-progress-badge" class="bg-[#1e1e1e] border border-[#444] text-emerald-400 font-bold px-2.5 py-0.5 rounded">0 / 0</span>
                     </div>
@@ -245,17 +251,17 @@
                     <div id="matches-list" class="space-y-4"></div>
                 </div>
 
-                <!-- Columna Derecha: Boleto de Apuesta (Bet Slip estilo bet365) -->
+                <!-- Columna Derecha: Boleto de Apuesta 1v1 (Bet Slip estilo bet365) -->
                 <aside class="lg:col-span-4 lg:sticky lg:top-28 space-y-4">
                     <div class="bg-[#282828] border border-[#3d3d3d] rounded-lg overflow-hidden shadow-xl">
                         <div class="bg-[#027b5b] px-4 py-3 flex items-center justify-between">
-                            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Boleto P2P</h2>
-                            <span class="text-[11px] bg-black/25 text-[#ffdf1b] font-bold px-2 py-0.5 rounded">Entre Usuarios</span>
+                            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Boleto Desafío 1v1</h2>
+                            <span class="text-[11px] bg-black/25 text-[#ffdf1b] font-bold px-2 py-0.5 rounded">Directo a Usuario</span>
                         </div>
 
                         <!-- Sin selección -->
                         <div id="slip-empty" class="p-6 text-center space-y-2">
-                            <div class="text-neutral-400 text-xs">Hacé clic en una cuota de cualquier partido pendiente para armar tu apuesta y publicarla para que otro usuario la acepte.</div>
+                            <div class="text-neutral-400 text-xs">Hacé clic en cualquier cuota de un partido o de "Apuestas Especiales" para enviarle un desafío 1v1 a otro usuario.</div>
                         </div>
 
                         <!-- Con selección -->
@@ -273,6 +279,14 @@
                                 <div id="slip-prob-note" class="text-[11px] text-neutral-400">Cuota fija inicial (primeros partidos)</div>
                             </div>
 
+                            <!-- Selección de Rival 1v1 -->
+                            <div class="space-y-1.5">
+                                <label for="slip-rival-select" class="block text-xs text-neutral-300 font-semibold">¿A quién le mandás el desafío 1v1?</label>
+                                <select id="slip-rival-select" onchange="updateSlipCalc()" class="w-full bg-[#1a1a1a] border border-[#4a4a4a] focus:border-[#ffdf1b] rounded px-3 py-2 text-sm font-bold text-white outline-none">
+                                    <option value="">-- Elegir usuario rival --</option>
+                                </select>
+                            </div>
+
                             <!-- Monto -->
                             <div class="space-y-2">
                                 <div class="flex justify-between text-xs">
@@ -288,14 +302,14 @@
                                 </div>
                             </div>
 
-                            <!-- Desglose P2P -->
+                            <!-- Desglose 1v1 -->
                             <div class="bg-[#1f1f1f] rounded p-3 space-y-1.5 text-xs border border-[#383838]">
                                 <div class="flex justify-between">
-                                    <span class="text-neutral-400">Otro usuario deberá cubrir:</span>
+                                    <span class="text-neutral-400">El rival deberá poner:</span>
                                     <span id="slip-counter-stake" class="font-bold text-neutral-200">$100</span>
                                 </div>
                                 <div class="flex justify-between">
-                                    <span class="text-neutral-400">Pozo total del cruce:</span>
+                                    <span class="text-neutral-400">Pozo total del 1v1:</span>
                                     <span id="slip-total-pot" class="font-bold text-white">$200</span>
                                 </div>
                                 <div class="flex justify-between pt-1.5 border-t border-[#333]">
@@ -305,18 +319,18 @@
                             </div>
 
                             <button onclick="placeP2PBet()" class="w-full bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] font-extrabold text-sm py-2.5 rounded shadow transition">
-                                Publicar Apuesta P2P
+                                Enviar Desafío 1v1
                             </button>
                             <p class="text-[11px] text-neutral-400 text-center leading-snug">
-                                Si nadie acepta tu apuesta antes de que termine el partido, se te devuelve el 100% automáticamente.
+                                El desafío le llega directo al usuario elegido. Si lo rechaza o no responde antes de que cierre el evento, se te devuelve el saldo.
                             </p>
                         </div>
                     </div>
 
-                    <!-- Mini caja de desafíos abiertos recientes -->
+                    <!-- Mini caja de desafíos recibidos -->
                     <div class="bg-[#282828] border border-[#3d3d3d] rounded-lg overflow-hidden">
                         <div class="px-4 py-2.5 bg-[#303030] border-b border-[#3d3d3d] flex items-center justify-between">
-                            <h3 class="text-xs font-bold uppercase tracking-wider text-neutral-200">Últimos Desafíos Abiertos</h3>
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-neutral-200">Desafíos Recibidos</h3>
                             <button onclick="switchView('view-market')" class="text-[11px] text-[#ffdf1b] hover:underline font-semibold">Ver todos</button>
                         </div>
                         <div id="mini-open-bets" class="p-3 space-y-2 text-xs"></div>
@@ -326,13 +340,28 @@
         </div>
 
         <!-- ==========================================
-             VISTA 2: MERCADO DE DESAFÍOS ABIERTOS (P2P)
+             VISTA ESPECIALES: APUESTAS GENERALES DEL TORNEO
+        =========================================== -->
+        <div id="view-specials" class="view-section hidden space-y-5">
+            <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                    <h2 class="text-lg font-bold text-white">Apuestas Especiales del Torneo (1v1)</h2>
+                    <p class="text-xs text-neutral-400">Elegí una predicción a largo plazo, seleccioná a qué usuario desafiar y enviale el mano a mano. Se liquidan automáticamente al terminar el torneo.</p>
+                </div>
+                <span id="specials-status-badge" class="text-xs bg-[#027b5b]/30 border border-[#027b5b] text-emerald-300 font-bold px-3 py-1 rounded">Abiertas</span>
+            </div>
+
+            <div id="specials-container" class="grid grid-cols-1 lg:grid-cols-2 gap-5"></div>
+        </div>
+
+        <!-- ==========================================
+             VISTA 2: BANDEJA DE DESAFÍOS 1v1 (RECIBIDOS Y ENVIADOS)
         =========================================== -->
         <div id="view-market" class="view-section hidden space-y-4">
             <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                    <h2 class="text-lg font-bold text-white">Mercado P2P — Desafíos Abiertos</h2>
-                    <p class="text-xs text-neutral-400">Aceptá la apuesta de otro usuario tomando el lado contrario. Si su pronóstico falla, te llevás el pozo entero.</p>
+                    <h2 class="text-lg font-bold text-white">Desafíos 1v1 Pendientes</h2>
+                    <p class="text-xs text-neutral-400">Acá aparecen los desafíos directos que te enviaron otros usuarios (para aceptar o rechazar) y los que vos enviaste esperando respuesta.</p>
                 </div>
             </div>
             <div id="market-bets-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
@@ -442,7 +471,7 @@
         <div id="view-ranking" class="view-section hidden space-y-4">
             <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-4">
                 <h2 class="text-lg font-bold text-white">Ranking de Apostadores</h2>
-                <p class="text-xs text-neutral-400">Todos arrancan con $1.000 fichas. El saldo refleja lo disponible + en juego.</p>
+                <p class="text-xs text-neutral-400">Balance neto (Saldo disponible + En juego − Total recargado) y fichas disponibles de cada usuario.</p>
             </div>
             <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg overflow-hidden">
                 <div class="overflow-x-auto">
@@ -453,7 +482,8 @@
                                 <th class="py-3 px-4">Usuario</th>
                                 <th class="py-3 px-4 text-center">Ganadas</th>
                                 <th class="py-3 px-4 text-center">Perdidas</th>
-                                <th class="py-3 px-4 text-right">Saldo Disponible</th>
+                                <th class="py-3 px-4 text-right">Recargado</th>
+                                <th class="py-3 px-4 text-right">Saldo Actual</th>
                             </tr>
                         </thead>
                         <tbody id="ranking-tbody" class="divide-y divide-[#333]"></tbody>
@@ -463,6 +493,36 @@
         </div>
 
     </main>
+
+    <!-- ==========================================
+         MODAL: RECARGAR SALDO
+    =========================================== -->
+    <div id="deposit-modal" class="fixed inset-0 bg-black/75 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#282828] border border-[#444] rounded-xl max-w-sm w-full overflow-hidden shadow-2xl">
+            <div class="bg-[#027b5b] px-5 py-3.5 flex items-center justify-between">
+                <h3 class="text-sm font-bold text-white uppercase tracking-wider">Recargar Saldo</h3>
+                <button onclick="closeDepositModal()" class="text-emerald-100 hover:text-white text-lg leading-none">&times;</button>
+            </div>
+            <form onsubmit="handleDepositSubmit(event)" class="p-5 space-y-4">
+                <div class="text-xs text-neutral-300">
+                    Saldo actual: <strong id="deposit-current-bal" class="text-[#ffdf1b]">$0</strong>
+                </div>
+                <div class="space-y-1.5">
+                    <label for="deposit-amount" class="text-xs font-semibold text-neutral-300">Monto a agregar ($)</label>
+                    <input type="number" id="deposit-amount" required min="10" step="10" value="500" class="w-full bg-[#1a1a1a] border border-[#4a4a4a] focus:border-[#ffdf1b] rounded px-3 py-2 text-sm font-bold text-white outline-none">
+                    <div class="grid grid-cols-4 gap-1.5 pt-1">
+                        <button type="button" onclick="document.getElementById('deposit-amount').value=200" class="bg-[#383838] hover:bg-[#484848] text-xs font-semibold py-1 rounded text-neutral-200">+$200</button>
+                        <button type="button" onclick="document.getElementById('deposit-amount').value=500" class="bg-[#383838] hover:bg-[#484848] text-xs font-semibold py-1 rounded text-neutral-200">+$500</button>
+                        <button type="button" onclick="document.getElementById('deposit-amount').value=1000" class="bg-[#383838] hover:bg-[#484848] text-xs font-semibold py-1 rounded text-neutral-200">+$1.000</button>
+                        <button type="button" onclick="document.getElementById('deposit-amount').value=2500" class="bg-[#383838] hover:bg-[#484848] text-xs font-semibold py-1 rounded text-neutral-200">+$2.500</button>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] font-extrabold text-sm py-2.5 rounded shadow transition">
+                    Confirmar Recarga
+                </button>
+            </form>
+        </div>
+    </div>
 
     <!-- ==========================================
          MODAL: INICIAR SESIÓN / REGISTRARSE
@@ -490,8 +550,15 @@
                     <input type="password" id="auth-password" required minlength="4" autocomplete="current-password" placeholder="Mínimo 4 caracteres" class="w-full bg-[#1a1a1a] border border-[#4a4a4a] focus:border-[#ffdf1b] rounded px-3 py-2 text-sm text-white outline-none">
                 </div>
 
-                <div id="auth-register-note" class="hidden text-[11px] bg-[#027b5b]/20 border border-[#027b5b] text-emerald-200 p-2.5 rounded">
-                    Al registrarte recibís <strong>$1.000 fichas gratis</strong> para apostar contra otros usuarios.
+                <div id="auth-initial-balance-box" class="hidden space-y-1.5">
+                    <label for="auth-initial-balance" class="text-xs font-semibold text-neutral-300">¿Con cuánto saldo querés arrancar? ($)</label>
+                    <input type="number" id="auth-initial-balance" min="0" step="10" value="500" class="w-full bg-[#1a1a1a] border border-[#4a4a4a] focus:border-[#ffdf1b] rounded px-3 py-2 text-sm font-bold text-white outline-none">
+                    <div class="grid grid-cols-4 gap-1.5">
+                        <button type="button" onclick="document.getElementById('auth-initial-balance').value=0" class="bg-[#383838] hover:bg-[#484848] text-[11px] font-semibold py-1 rounded text-neutral-200">$0</button>
+                        <button type="button" onclick="document.getElementById('auth-initial-balance').value=500" class="bg-[#383838] hover:bg-[#484848] text-[11px] font-semibold py-1 rounded text-neutral-200">$500</button>
+                        <button type="button" onclick="document.getElementById('auth-initial-balance').value=1000" class="bg-[#383838] hover:bg-[#484848] text-[11px] font-semibold py-1 rounded text-neutral-200">$1.000</button>
+                        <button type="button" onclick="document.getElementById('auth-initial-balance').value=2000" class="bg-[#383838] hover:bg-[#484848] text-[11px] font-semibold py-1 rounded text-neutral-200">$2.000</button>
+                    </div>
                 </div>
 
                 <button type="submit" id="auth-submit-btn" class="w-full bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] font-extrabold text-sm py-2.5 rounded shadow transition">
@@ -503,20 +570,19 @@
 
     <script>
         /* ==========================================================================
-           1. CONFIGURACIÓN DE FIREBASE (PEGAR LOS MISMOS DATOS QUE EN index_2.html)
+           1. CONFIGURACIÓN DE FIREBASE (CONECTADO AL PROYECTO DEL TORNEO)
            ========================================================================== */
-       const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyCIEPatrfjAIJlksl8hkPwz_76UUdAl66M",
-  authDomain: "torneo3v3mombe.firebaseapp.com",
-  databaseURL: "https://torneo3v3mombe-default-rtdb.firebaseio.com",
-  projectId: "torneo3v3mombe",
-  storageBucket: "torneo3v3mombe.firebasestorage.app",
-  messagingSenderId: "713112221266",
-  appId: "1:713112221266:web:e73fe3cc5d53426ce8d18b",
-  measurementId: "G-7W4CSF2VDS"
-};
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyCIEPatrfjAIJlksl8hkPwz_76UUdAl66M",
+            authDomain: "torneo3v3mombe.firebaseapp.com",
+            databaseURL: "https://torneo3v3mombe-default-rtdb.firebaseio.com",
+            projectId: "torneo3v3mombe",
+            storageBucket: "torneo3v3mombe.firebasestorage.app",
+            messagingSenderId: "713112221266",
+            appId: "1:713112221266:web:e73fe3cc5d53426ce8d18b",
+            measurementId: "G-7W4CSF2VDS"
+        };
 
-        const STARTING_BALANCE = 1000;
         let firebaseDb = null;
         let isDemoMode = false;
 
@@ -535,56 +601,18 @@
             knockoutMatches: []
         };
 
-        let usersMap = {}; // username -> { username, passHash, balance, wins, losses, createdAt }
-        let betsMap = {};  // betId -> { id, matchId, isKnockout, pick, pickLabel, odd, creator, creatorStake, taker, takerStake, status, winnerUser, createdAt }
+        let usersMap = {}; // username -> { username, passHash, balance, totalDeposited, wins, losses, createdAt }
+        let betsMap = {};  // betId -> { id, category, matchId, isKnockout, marketType, pick, targetId, line, pickLabel, odd, creator, creatorStake, targetUser, taker, takerStake, status, winnerUser, createdAt }
         let currentUser = null; // username string
 
         let selectedRoundFilter = 'ALL';
         let myBetsFilter = 'ALL';
-        let activeSlip = null; // { matchId, isKnockout, pick, pickLabel, odd, probText }
+        let activeSlip = null; // { category, matchId, isKnockout, marketType, pick, targetId, line, pickLabel, odd, homeName, awayName, meta, probText }
         let authMode = 'login';
-
-        /* ==========================================================================
-           3. RECURSOS VISUALES DE SELECCIONES (MISMOS QUE EN index_2.html)
-           ========================================================================== */
-        const FLAG_ISO = {
-            ARG: 'ar', BRA: 'br', URU: 'uy', FRA: 'fr', ESP: 'es', GER: 'de', ITA: 'it',
-            ENG: 'gb-eng', POR: 'pt', NED: 'nl', COL: 'co', CRO: 'hr', MAR: 'ma', JPN: 'jp',
-            MEX: 'mx', USA: 'us', CAN: 'ca', CHL: 'cl', AYB: 'ag', BEL: 'be', SUI: 'ch',
-            DEN: 'dk', SWE: 'se', NOR: 'no', POL: 'pl', AUT: 'at', SCO: 'gb-sct', WAL: 'gb-wls',
-            TUR: 'tr', SRB: 'rs', UKR: 'ua', CZE: 'cz', HUN: 'hu', GRE: 'gr', IRL: 'ie',
-            SEN: 'sn', NGA: 'ng', EGY: 'eg', ALG: 'dz', TUN: 'tn', CMR: 'cm', GHA: 'gh',
-            CIV: 'ci', RSA: 'za', CPV: 'cv', PAR: 'py', ECU: 'ec', PER: 'pe', BOL: 'bo',
-            VEN: 've', CRC: 'cr', PAN: 'pa', JAM: 'jm', HON: 'hn', HAI: 'ht', CUW: 'cw',
-            KOR: 'kr', IRN: 'ir', AUS: 'au', KSA: 'sa', QAT: 'qa', UZB: 'uz', JOR: 'jo',
-            NZL: 'nz', CHN: 'cn'
-        };
-
-        function escHtml(str) {
-            return String(str || '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
-        }
-
-        function flagMarkup(team, cls = 'w-5 h-3.5') {
-            if (!team) return '';
-            const code = String(team.code || '').slice(0, 3).toUpperCase();
-            const iso = String(team.flag || FLAG_ISO[team.code] || '').toLowerCase();
-            if (!/^[a-z]{2}(-[a-z]{2,3})?$/.test(iso)) {
-                return `<span class="text-[10px] font-bold px-1 py-0.5 rounded bg-neutral-700 text-white">${code}</span>`;
-            }
-            return `<img src="https://flagcdn.com/w40/${iso}.png" alt="${escHtml(team.name)}" class="${cls} object-cover rounded-[2px] border border-black/40 inline-block shrink-0" loading="lazy" onerror="this.replaceWith(document.createTextNode('${code}'))">`;
-        }
-
-        function formatMoney(n) {
-            return '$' + Math.round(Number(n) || 0).toLocaleString('es-AR');
-        }
-
-        function showToast(msg) {
-            const t = document.getElementById('toast');
-            document.getElementById('toast-msg').textContent = msg;
-            t.classList.remove('hidden');
+        let expandedMatchProps = {}; // matchId -> boolean (desplegable de +goles y goles por jugador)
             clearTimeout(window._toastTimer);
             window._toastTimer = setTimeout(() => t.classList.add('hidden'), 3400);
-        }
+        
 
         function uid() {
             return 'bet_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
@@ -671,6 +699,7 @@
                         localStorage.removeItem('bet3v3_session_user');
                     }
                     updateAuthUI();
+                    renderRivalSelector();
                     renderRanking();
                     updateSlipCalc();
                 });
@@ -731,7 +760,7 @@
         }
 
         /* ==========================================================================
-           5. CUENTAS DE USUARIO (SIMPLE: USUARIO + CONTRASEÑA, SIN MAIL)
+           5. CUENTAS DE USUARIO Y RECARGA DE SALDO
            ========================================================================== */
         function openAuthModal(mode = 'login') {
             setAuthMode(mode);
@@ -748,8 +777,8 @@
             authMode = mode;
             const isReg = mode === 'register';
             document.getElementById('auth-modal-title').textContent = isReg ? 'Crear Cuenta' : 'Iniciar Sesión';
-            document.getElementById('auth-submit-btn').textContent = isReg ? 'Registrarme (+$1.000)' : 'Entrar';
-            document.getElementById('auth-register-note').classList.toggle('hidden', !isReg);
+            document.getElementById('auth-submit-btn').textContent = isReg ? 'Crear Cuenta' : 'Entrar';
+            document.getElementById('auth-initial-balance-box').classList.toggle('hidden', !isReg);
 
             document.getElementById('auth-tab-login').className = `py-1.5 rounded ${!isReg ? 'bg-[#027b5b] text-white' : 'text-neutral-400'}`;
             document.getElementById('auth-tab-register').className = `py-1.5 rounded ${isReg ? 'bg-[#027b5b] text-white' : 'text-neutral-400'}`;
@@ -776,10 +805,12 @@
                     showToast('Ese nombre de usuario ya existe. Elegí otro o iniciá sesión.');
                     return;
                 }
+                const initialBal = Math.max(0, Math.round(Number(document.getElementById('auth-initial-balance').value) || 0));
                 const newUser = {
                     username: rawUser,
                     passHash,
-                    balance: STARTING_BALANCE,
+                    balance: initialBal,
+                    totalDeposited: initialBal,
                     wins: 0,
                     losses: 0,
                     createdAt: Date.now()
@@ -795,7 +826,7 @@
                 closeAuthModal();
                 updateAuthUI();
                 renderAll();
-                showToast(`¡Bienvenido ${rawUser}! Arrancás con ${formatMoney(STARTING_BALANCE)}.`);
+                showToast(`¡Bienvenido ${rawUser}! Tu saldo inicial es ${formatMoney(initialBal)}.`);
             } else {
                 const existing = usersMap[rawUser];
                 if (!existing) {
@@ -813,6 +844,47 @@
                 renderAll();
                 showToast(`Sesión iniciada como ${rawUser}.`);
             }
+        }
+
+        function openDepositModal() {
+            if (!currentUser || !usersMap[currentUser]) {
+                openAuthModal('login');
+                return;
+            }
+            document.getElementById('deposit-current-bal').textContent = formatMoney(usersMap[currentUser].balance);
+            document.getElementById('deposit-modal').classList.remove('hidden');
+        }
+
+        function closeDepositModal() {
+            document.getElementById('deposit-modal').classList.add('hidden');
+        }
+
+        async function handleDepositSubmit(e) {
+            e.preventDefault();
+            if (!currentUser || !usersMap[currentUser]) return;
+            const amount = Math.round(Number(document.getElementById('deposit-amount').value) || 0);
+            if (amount < 10) {
+                showToast('El monto mínimo de recarga es $10.');
+                return;
+            }
+
+            if (isDemoMode) {
+                usersMap[currentUser].balance = (usersMap[currentUser].balance || 0) + amount;
+                usersMap[currentUser].totalDeposited = (usersMap[currentUser].totalDeposited || 0) + amount;
+                saveDemoLocal();
+            } else {
+                await firebaseDb.ref('protocasino/users/' + currentUser).transaction(u => {
+                    if (!u) return u;
+                    u.balance = (u.balance || 0) + amount;
+                    u.totalDeposited = (u.totalDeposited || 0) + amount;
+                    return u;
+                });
+            }
+
+            closeDepositModal();
+            updateAuthUI();
+            updateSlipCalc();
+            showToast(`Recargaste ${formatMoney(amount)} a tu cuenta.`);
         }
 
         function logoutUser() {
@@ -908,6 +980,30 @@
             return map;
         }
 
+        // Estadísticas individuales acumuladas de cada jugador (goles y partidos jugados)
+        function getPlayerStatsMap() {
+            const pMap = {};
+            tournamentState.teams.forEach(t => {
+                (t.players || []).forEach(p => {
+                    pMap[p.id] = { player: p, team: t, goals: 0, pj: 0, mvps: 0 };
+                });
+            });
+            const allPlayed = [...tournamentState.matches, ...tournamentState.knockoutMatches].filter(m => m.played);
+            allPlayed.forEach(m => {
+                const h = getTeam(m.homeId);
+                const a = getTeam(m.awayId);
+                if (h) (h.players || []).forEach(p => { if (pMap[p.id]) pMap[p.id].pj++; });
+                if (a) (a.players || []).forEach(p => { if (pMap[p.id]) pMap[p.id].pj++; });
+                Object.entries(m.goals || {}).forEach(([pid, qty]) => {
+                    if (pMap[pid]) pMap[pid].goals += qty;
+                });
+                if (m.mvpId && pMap[m.mvpId]) pMap[m.mvpId].mvps += 1;
+            });
+            return pMap;
+        }
+
+        const clampOdd = (val, min, max) => Number(Math.max(min, Math.min(max, val)).toFixed(2));
+
         /**
          * Calcula cuotas P2P justas (sin margen de la casa):
          * - Si alguno de los equipos jugó menos de 2 partidos -> cuota fija 2.00 (primeros partidos)
@@ -944,8 +1040,6 @@
             const diff = teamPower(h) - teamPower(a);
             const homeShare = 1 / (1 + Math.exp(-diff / 18));
 
-            const clampOdd = (val, min, max) => Number(Math.max(min, Math.min(max, val)).toFixed(2));
-
             if (isKnockout) {
                 const pHome = Math.max(0.15, Math.min(0.85, homeShare));
                 const pAway = 1 - pHome;
@@ -976,9 +1070,182 @@
             };
         }
 
+        // Cuotas de Total de Goles (Over/Under) y Goles por Jugador en un partido
+        function computeMatchPropOdds(match) {
+            const statsMap = getAllTeamsStatsMap();
+            const pMap = getPlayerStatsMap();
+            const h = statsMap[match.homeId];
+            const a = statsMap[match.awayId];
+
+            const hasEnoughData = h && a && h.pj >= 2 && a.pj >= 2;
+
+            // Goles esperados del partido (en 3v3 suelen hacerse ~3.5 goles por partido)
+            let expectedGoals = 3.5;
+            if (hasEnoughData) {
+                const hFor = h.gf / h.pj;
+                const hAg = h.gc / h.pj;
+                const aFor = a.gf / a.pj;
+                const aAg = a.gc / a.pj;
+                expectedGoals = Math.max(1.5, Math.min(8.0, ((hFor + aAg) / 2) + ((aFor + hAg) / 2)));
+            }
+
+            // Distribución de Poisson para calcular probabilidad de superar N goles
+            const poissonCdf = (lambda, k) => {
+                let sum = 0, term = Math.exp(-lambda);
+                for (let i = 0; i <= k; i++) {
+                    if (i > 0) term *= lambda / i;
+                    sum += term;
+                }
+                return Math.min(0.96, Math.max(0.04, sum));
+            };
+
+            const lines = [2.5, 3.5, 4.5].map(line => {
+                if (!hasEnoughData) {
+                    return { line, overOdd: 2.00, underOdd: 2.00, probOver: 50 };
+                }
+                const k = Math.floor(line);
+                const pUnder = poissonCdf(expectedGoals, k);
+                const pOver = 1 - pUnder;
+                return {
+                    line,
+                    overOdd: clampOdd(1 / pOver, 1.20, 5.50),
+                    underOdd: clampOdd(1 / pUnder, 1.20, 5.50),
+                    probOver: Math.round(pOver * 100)
+                };
+            });
+
+            const homeTeam = getTeam(match.homeId);
+            const awayTeam = getTeam(match.awayId);
+            const matchPlayers = [
+                ...(homeTeam?.players || []).map(p => ({ ...p, team: homeTeam })),
+                ...(awayTeam?.players || []).map(p => ({ ...p, team: awayTeam }))
+            ];
+
+            const playersOdds = matchPlayers.map(p => {
+                const st = pMap[p.id];
+                if (!st || st.pj < 2) {
+                    return { player: p, team: p.team, goals: st?.goals || 0, odd1: 2.00, odd2: 2.00, prob1: 50, prob2: 50 };
+                }
+                const gpg = Math.max(0.15, Math.min(2.8, st.goals / st.pj));
+                const pZero = Math.exp(-gpg);
+                const pOne = gpg * pZero;
+                const prob1 = Math.max(0.15, Math.min(0.88, 1 - pZero));
+                const prob2 = Math.max(0.08, Math.min(0.75, 1 - (pZero + pOne)));
+                return {
+                    player: p,
+                    team: p.team,
+                    goals: st.goals,
+                    odd1: clampOdd(1 / prob1, 1.20, 5.50),
+                    odd2: clampOdd(1 / prob2, 1.40, 7.50),
+                    prob1: Math.round(prob1 * 100),
+                    prob2: Math.round(prob2 * 100)
+                };
+            });
+
+            return { isDynamic: hasEnoughData, expectedGoals: expectedGoals.toFixed(1), lines, playersOdds };
+        }
+
+        // Cuotas para Apuestas Especiales del Torneo (Campeón, Bota de Oro, MVP, 1° de Grupo)
+        function computeTournamentSpecials() {
+            const statsMap = getAllTeamsStatsMap();
+            const pMap = getPlayerStatsMap();
+            const teams = tournamentState.teams || [];
+            const anyPlayed = tournamentState.matches.some(m => m.played);
+
+            // 1. Campeón del Torneo
+            const teamScores = teams.map(t => {
+                const s = statsMap[t.id];
+                if (!s || s.pj === 0) return { team: t, score: 10, label: 'Sin partidos' };
+                const ppg = s.pts / s.pj;
+                const score = Math.max(2, 10 + (ppg * 14) + (s.dg * 2.5));
+                return { team: t, score, label: `${s.pts} pts • ${s.pj} PJ` };
+            });
+            const totalTeamScore = teamScores.reduce((acc, x) => acc + x.score, 0) || 1;
+            const championOptions = teamScores.map(x => {
+                const prob = x.score / totalTeamScore;
+                return {
+                    targetId: x.team.id,
+                    name: x.team.name,
+                    sub: x.label,
+                    team: x.team,
+                    odd: !anyPlayed ? 2.00 : clampOdd(1 / prob, 1.35, 15.00),
+                    prob: Math.round(prob * 100)
+                };
+            }).sort((a, b) => a.odd - b.odd);
+
+            // 2. Máximo Goleador (Bota de Oro)
+            const allPlayers = Object.values(pMap);
+            const scorerWeights = allPlayers.map(st => {
+                const gpg = st.pj > 0 ? st.goals / st.pj : 0;
+                const weight = Math.max(1, 2 + (st.goals * 4) + (gpg * 6));
+                return { st, weight };
+            });
+            const totalScorerW = scorerWeights.reduce((acc, x) => acc + x.weight, 0) || 1;
+            const topScorerOptions = scorerWeights.map(x => {
+                const prob = x.weight / totalScorerW;
+                return {
+                    targetId: x.st.player.id,
+                    name: x.st.player.name,
+                    sub: `${x.st.team.name} • ${x.st.goals} goles`,
+                    team: x.st.team,
+                    odd: !anyPlayed ? 2.00 : clampOdd(1 / prob, 1.40, 18.00),
+                    prob: Math.round(prob * 100)
+                };
+            }).sort((a, b) => a.odd - b.odd);
+
+            // 3. Mejor Jugador del Torneo (Más MVPs)
+            const mvpWeights = allPlayers.map(st => {
+                const weight = Math.max(1, 2 + (st.mvps * 6) + (st.goals * 1.5));
+                return { st, weight };
+            });
+            const totalMvpW = mvpWeights.reduce((acc, x) => acc + x.weight, 0) || 1;
+            const topMvpOptions = mvpWeights.map(x => {
+                const prob = x.weight / totalMvpW;
+                return {
+                    targetId: x.st.player.id,
+                    name: x.st.player.name,
+                    sub: `${x.st.team.name} • ${x.st.mvps} MVP`,
+                    team: x.st.team,
+                    odd: !anyPlayed ? 2.00 : clampOdd(1 / prob, 1.40, 18.00),
+                    prob: Math.round(prob * 100)
+                };
+            }).sort((a, b) => a.odd - b.odd);
+
+            // 4. Ganador de cada Grupo (1° puesto)
+            const groupWinners = (tournamentState.groups || []).map(g => {
+                const rows = calculateGroupStandings(g);
+                const weights = rows.map(r => {
+                    const w = r.pj === 0 ? 10 : Math.max(2, 10 + (r.pts * 4) + (r.dg * 1.5));
+                    return { row: r, w };
+                });
+                const sumW = weights.reduce((acc, x) => acc + x.w, 0) || 1;
+                return {
+                    groupName: g.name,
+                    options: weights.map(x => {
+                        const prob = x.w / sumW;
+                        return {
+                            targetId: x.row.team.id,
+                            name: x.row.team.name,
+                            sub: `${x.row.pts} pts • DG ${x.row.dg >= 0 ? '+' + x.row.dg : x.row.dg}`,
+                            team: x.row.team,
+                            odd: !anyPlayed ? 2.00 : clampOdd(1 / prob, 1.25, 10.00),
+                            prob: Math.round(prob * 100)
+                        };
+                    })
+                };
+            });
+
+            return { anyPlayed, championOptions, topScorerOptions, topMvpOptions, groupWinners };
+        }
+
         /* ==========================================================================
-           7. LÓGICA DE APUESTAS P2P (CREAR, ACEPTAR, CANCELAR Y LIQUIDAR)
+           7. LÓGICA DE DESAFÍOS 1v1 (ENVIAR, ACEPTAR, RECHAZAR Y LIQUIDAR)
            ========================================================================== */
+        function toggleMatchProps(matchId) {
+            expandedMatchProps[matchId] = !expandedMatchProps[matchId];
+            renderMatches();
+        }
+
         function selectBetOutcome(matchId, isKnockout, pick) {
             const list = isKnockout ? tournamentState.knockoutMatches : tournamentState.matches;
             const match = list.find(m => m.id === matchId);
@@ -1004,9 +1271,13 @@
             }
 
             activeSlip = {
+                category: 'MATCH',
                 matchId,
                 isKnockout,
+                marketType: '1X2',
                 pick,
+                targetId: null,
+                line: null,
                 pickLabel,
                 odd,
                 homeName: home.name,
@@ -1020,10 +1291,68 @@
             renderBetSlip();
             renderMatches();
 
-            // En móvil, hacer scroll suave al boleto
             if (window.innerWidth < 1024) {
                 document.getElementById('slip-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
+        }
+
+        function selectMatchPropBet(matchId, isKnockout, marketType, pick, targetId, line, odd, pickLabel, probVal, isDynamic) {
+            const list = isKnockout ? tournamentState.knockoutMatches : tournamentState.matches;
+            const match = list.find(m => m.id === matchId);
+            if (!match || match.played) return;
+            const home = getTeam(match.homeId);
+            const away = getTeam(match.awayId);
+            if (!home || !away) return;
+
+            activeSlip = {
+                category: 'MATCH',
+                matchId,
+                isKnockout,
+                marketType,
+                pick,
+                targetId: targetId || null,
+                line: line ?? null,
+                pickLabel,
+                odd,
+                homeName: home.name,
+                awayName: away.name,
+                meta: isKnockout ? match.stageName : `${match.groupName} • Fecha ${match.round || 1}`,
+                probText: isDynamic
+                    ? `Cuota dinámica (~${probVal}% prob.)`
+                    : 'Cuota fija inicial x2.00 (primeros partidos)'
+            };
+
+            renderBetSlip();
+            renderMatches();
+
+            if (window.innerWidth < 1024) {
+                document.getElementById('slip-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function selectSpecialBet(marketType, groupName, targetId, odd, pickLabel, probVal, isDynamic) {
+            activeSlip = {
+                category: 'SPECIAL',
+                matchId: 'TOURNAMENT_SPECIAL',
+                isKnockout: false,
+                marketType, // 'CHAMPION' | 'TOP_SCORER' | 'TOP_MVP' | 'GROUP_WINNER'
+                pick: groupName || marketType,
+                targetId,
+                line: null,
+                pickLabel,
+                odd,
+                homeName: 'Especial Torneo 3v3',
+                awayName: groupName || 'Mundial 26',
+                meta: 'Apuesta Especial • Torneo Completo',
+                probText: isDynamic
+                    ? `Cuota según rendimiento actual (~${probVal}% prob.)`
+                    : 'Cuota fija inicial x2.00'
+            };
+
+            // Cambiar a vista partidos donde está el boleto visible o abrir scroll
+            switchView('view-matches');
+            renderBetSlip();
+            showToast(`Seleccionaste "${pickLabel}". Elegí el rival en el boleto.`);
         }
 
         function clearBetSlip() {
@@ -1037,6 +1366,18 @@
             updateSlipCalc();
         }
 
+        function renderRivalSelector() {
+            const sel = document.getElementById('slip-rival-select');
+            if (!sel) return;
+            const prev = sel.value;
+            const rivals = Object.values(usersMap)
+                .filter(u => u.username !== currentUser)
+                .sort((a, b) => a.username.localeCompare(b.username));
+
+            sel.innerHTML = `<option value="">-- Elegir usuario rival (${rivals.length} disponibles) --</option>` +
+                rivals.map(u => `<option value="${escHtml(u.username)}" ${prev === u.username ? 'selected' : ''}>${escHtml(u.username)} (Saldo: ${formatMoney(u.balance)})</option>`).join('');
+        }
+
         function renderBetSlip() {
             const empty = document.getElementById('slip-empty');
             const form = document.getElementById('slip-form');
@@ -1048,6 +1389,7 @@
             empty.classList.add('hidden');
             form.classList.remove('hidden');
 
+            renderRivalSelector();
             document.getElementById('slip-match-meta').textContent = activeSlip.meta;
             document.getElementById('slip-match-teams').textContent = `${activeSlip.homeName} vs ${activeSlip.awayName}`;
             document.getElementById('slip-pick-label').textContent = activeSlip.pickLabel;
@@ -1073,10 +1415,20 @@
         async function placeP2PBet() {
             if (!currentUser || !usersMap[currentUser]) {
                 openAuthModal('login');
-                showToast('Iniciá sesión para publicar una apuesta.');
+                showToast('Iniciá sesión para enviar un desafío 1v1.');
                 return;
             }
             if (!activeSlip) return;
+
+            const targetUser = document.getElementById('slip-rival-select').value;
+            if (!targetUser || !usersMap[targetUser]) {
+                showToast('Seleccioná a qué usuario le querés mandar el desafío 1v1.');
+                return;
+            }
+            if (targetUser === currentUser) {
+                showToast('No podés desafiarte a vos mismo.');
+                return;
+            }
 
             const user = usersMap[currentUser];
             const stake = Math.round(Number(document.getElementById('slip-stake').value) || 0);
@@ -1085,7 +1437,7 @@
                 return;
             }
             if (stake > user.balance) {
-                showToast('No tenés saldo suficiente.');
+                showToast('No tenés saldo suficiente. Usá "+ Recargar" arriba.');
                 return;
             }
 
@@ -1094,18 +1446,23 @@
 
             const bet = {
                 id: uid(),
+                category: activeSlip.category || 'MATCH',
                 matchId: activeSlip.matchId,
                 isKnockout: activeSlip.isKnockout,
+                marketType: activeSlip.marketType || '1X2',
                 matchLabel: `${activeSlip.homeName} vs ${activeSlip.awayName}`,
                 meta: activeSlip.meta,
                 pick: activeSlip.pick,
+                targetId: activeSlip.targetId || null,
+                line: activeSlip.line ?? null,
                 pickLabel: activeSlip.pickLabel,
                 odd: activeSlip.odd,
                 creator: currentUser,
                 creatorStake: stake,
+                targetUser: targetUser,
                 taker: null,
                 takerStake: counterStake,
-                status: 'OPEN', // 'OPEN' | 'MATCHED' | 'SETTLED' | 'REFUNDED'
+                status: 'OPEN', // 'OPEN' | 'MATCHED' | 'SETTLED' | 'REFUNDED' | 'REJECTED'
                 winnerUser: null,
                 createdAt: Date.now()
             };
@@ -1121,7 +1478,7 @@
 
             clearBetSlip();
             renderAll();
-            showToast('¡Apuesta publicada! Esperando que otro usuario la acepte.');
+            showToast(`¡Desafío 1v1 enviado a ${targetUser}!`);
         }
 
         async function acceptP2PBet(betId) {
@@ -1132,17 +1489,21 @@
             }
             const bet = betsMap[betId];
             if (!bet || bet.status !== 'OPEN') {
-                showToast('Esta apuesta ya no está disponible.');
+                showToast('Este desafío ya no está pendiente.');
+                return;
+            }
+            if (bet.targetUser && bet.targetUser !== currentUser) {
+                showToast(`Este desafío 1v1 fue enviado exclusivamente a ${bet.targetUser}.`);
                 return;
             }
             if (bet.creator === currentUser) {
-                showToast('No podés aceptar tu propia apuesta.');
+                showToast('No podés aceptar tu propio desafío.');
                 return;
             }
 
             const user = usersMap[currentUser];
             if (bet.takerStake > user.balance) {
-                showToast(`Necesitás ${formatMoney(bet.takerStake)} para cubrir esta apuesta.`);
+                showToast(`Necesitás ${formatMoney(bet.takerStake)} para aceptar este desafío. Usá "+ Recargar".`);
                 return;
             }
 
@@ -1152,13 +1513,13 @@
                 betsMap[betId].status = 'MATCHED';
                 saveDemoLocal();
                 renderAll();
-                showToast(`¡Desafío aceptado contra ${bet.creator}!`);
+                showToast(`¡Desafío 1v1 aceptado contra ${bet.creator}!`);
                 return;
             }
 
-            // Transacción atómica para evitar que dos usuarios acepten el mismo desafío a la vez
             const res = await firebaseDb.ref('protocasino/bets/' + betId).transaction(curr => {
                 if (!curr || curr.status !== 'OPEN') return;
+                if (curr.targetUser && curr.targetUser !== currentUser) return;
                 curr.taker = currentUser;
                 curr.status = 'MATCHED';
                 return curr;
@@ -1166,9 +1527,33 @@
 
             if (res.committed) {
                 await firebaseDb.ref('protocasino/users/' + currentUser + '/balance').transaction(b => (b || 0) - bet.takerStake);
-                showToast(`¡Desafío aceptado contra ${bet.creator}!`);
+                showToast(`¡Desafío 1v1 aceptado contra ${bet.creator}!`);
             } else {
-                showToast('Otro usuario aceptó esa apuesta justo antes.');
+                showToast('No se pudo aceptar el desafío.');
+            }
+        }
+
+        async function rejectP2PBet(betId) {
+            const bet = betsMap[betId];
+            if (!bet || bet.status !== 'OPEN' || bet.targetUser !== currentUser) return;
+
+            if (isDemoMode) {
+                usersMap[bet.creator].balance += bet.creatorStake;
+                betsMap[betId].status = 'REJECTED';
+                saveDemoLocal();
+                renderAll();
+                showToast(`Rechazaste el desafío de ${bet.creator}. Se le devolvió su saldo.`);
+                return;
+            }
+
+            const res = await firebaseDb.ref('protocasino/bets/' + betId).transaction(curr => {
+                if (!curr || curr.status !== 'OPEN') return;
+                curr.status = 'REJECTED';
+                return curr;
+            });
+            if (res.committed) {
+                await firebaseDb.ref('protocasino/users/' + bet.creator + '/balance').transaction(b => (b || 0) + bet.creatorStake);
+                showToast(`Desafío rechazado. Saldo devuelto a ${bet.creator}.`);
             }
         }
 
@@ -1181,21 +1566,99 @@
                 delete betsMap[betId];
                 saveDemoLocal();
                 renderAll();
-                showToast('Apuesta cancelada y saldo devuelto.');
+                showToast('Desafío cancelado y saldo devuelto.');
                 return;
             }
 
             const res = await firebaseDb.ref('protocasino/bets/' + betId).transaction(curr => {
                 if (!curr || curr.status !== 'OPEN') return;
-                return null; // Elimina la apuesta abierta
+                return null;
             });
             if (res.committed) {
                 await firebaseDb.ref('protocasino/users/' + currentUser + '/balance').transaction(b => (b || 0) + bet.creatorStake);
-                showToast('Apuesta cancelada y saldo devuelto.');
+                showToast('Desafío cancelado y saldo devuelto.');
             }
         }
 
-        // Liquidación automática cuando un partido se marca como finalizado en index_2.html
+        // Verifica si el torneo entero terminó (para liquidar Apuestas Especiales)
+        function isTournamentFinished() {
+            if (!tournamentState.matches.length) return false;
+            const regularAllPlayed = tournamentState.matches.every(m => m.played);
+            if (!regularAllPlayed) return false;
+
+            if (tournamentState.format === 'LEAGUE' && tournamentState.leagueQualifiers === 0) {
+                return true;
+            }
+            const finalMatch = tournamentState.knockoutMatches.find(m => m.stage === 'F');
+            return Boolean(finalMatch && finalMatch.played && finalMatch.winnerId);
+        }
+
+        // Evalúa si el creador ganó una apuesta de partido (1X2, Total Goles o Goles de Jugador)
+        function evaluateMatchBetOutcome(bet, match) {
+            const mType = bet.marketType || '1X2';
+
+            if (mType === 'TOTAL_GOALS') {
+                const totalGoals = (match.homeScore || 0) + (match.awayScore || 0);
+                return bet.pick === 'OVER' ? totalGoals > bet.line : totalGoals < bet.line;
+            }
+
+            if (mType === 'PLAYER_GOALS') {
+                const pGoals = (match.goals && match.goals[bet.targetId]) || 0;
+                return pGoals > bet.line;
+            }
+
+            // Por defecto: 1X2
+            let outcome = 'DRAW';
+            if (match._ko) {
+                outcome = match.winnerId === match.homeId ? 'HOME' : 'AWAY';
+            } else {
+                if (match.homeScore > match.awayScore) outcome = 'HOME';
+                else if (match.awayScore > match.homeScore) outcome = 'AWAY';
+                else outcome = 'DRAW';
+            }
+            return bet.pick === outcome;
+        }
+
+        // Evalúa si el creador ganó una apuesta especial de torneo
+        function evaluateSpecialBetOutcome(bet) {
+            const mType = bet.marketType;
+
+            if (mType === 'GROUP_WINNER') {
+                const group = tournamentState.groups.find(g => g.name === bet.pick);
+                if (!group) return false;
+                const rows = calculateGroupStandings(group);
+                return rows.length > 0 && rows[0].team.id === bet.targetId;
+            }
+
+            if (mType === 'CHAMPION') {
+                if (tournamentState.format === 'LEAGUE' && tournamentState.leagueQualifiers === 0) {
+                    const rows = calculateGroupStandings(tournamentState.groups[0]);
+                    return rows.length > 0 && rows[0].team.id === bet.targetId;
+                }
+                const finalMatch = tournamentState.knockoutMatches.find(m => m.stage === 'F');
+                return Boolean(finalMatch && finalMatch.winnerId === bet.targetId);
+            }
+
+            if (mType === 'TOP_SCORER') {
+                const pMap = getPlayerStatsMap();
+                const all = Object.values(pMap);
+                const maxG = Math.max(...all.map(x => x.goals), 0);
+                if (maxG === 0) return false;
+                return (pMap[bet.targetId]?.goals || 0) === maxG;
+            }
+
+            if (mType === 'TOP_MVP') {
+                const pMap = getPlayerStatsMap();
+                const all = Object.values(pMap);
+                const maxM = Math.max(...all.map(x => x.mvps), 0);
+                if (maxM === 0) return false;
+                return (pMap[bet.targetId]?.mvps || 0) === maxM;
+            }
+
+            return false;
+        }
+
+        // Liquidación automática cuando un partido o el torneo finaliza
         function checkAndSettleFinishedMatches() {
             const allMatches = [
                 ...tournamentState.matches.map(m => ({ ...m, _ko: false })),
@@ -1204,28 +1667,38 @@
             const matchById = {};
             allMatches.forEach(m => { matchById[m.id] = m; });
 
+            const tourneyDone = isTournamentFinished();
+            const regularDone = tournamentState.matches.length > 0 && tournamentState.matches.every(m => m.played);
+
             Object.values(betsMap).forEach(bet => {
                 if (!bet || (bet.status !== 'OPEN' && bet.status !== 'MATCHED')) return;
+
+                // Caso A: Apuestas Especiales de Torneo
+                if (bet.category === 'SPECIAL') {
+                    const readyToSettle = bet.marketType === 'GROUP_WINNER' ? regularDone : tourneyDone;
+                    if (!readyToSettle) return;
+
+                    if (bet.status === 'OPEN') {
+                        settleRefund(bet);
+                        return;
+                    }
+                    const creatorWon = evaluateSpecialBetOutcome(bet);
+                    const winnerUser = creatorWon ? bet.creator : bet.taker;
+                    const loserUser = creatorWon ? bet.taker : bet.creator;
+                    settleMatchedBet(bet, winnerUser, loserUser, bet.creatorStake + bet.takerStake);
+                    return;
+                }
+
+                // Caso B: Apuestas de Partido
                 const match = matchById[bet.matchId];
                 if (!match || !match.played) return;
 
-                // Si quedó abierta sin nadie que la acepte -> devolver plata al creador
                 if (bet.status === 'OPEN') {
                     settleRefund(bet);
                     return;
                 }
 
-                // Determinar resultado real del partido
-                let outcome = 'DRAW';
-                if (match._ko) {
-                    outcome = match.winnerId === match.homeId ? 'HOME' : 'AWAY';
-                } else {
-                    if (match.homeScore > match.awayScore) outcome = 'HOME';
-                    else if (match.awayScore > match.homeScore) outcome = 'AWAY';
-                    else outcome = 'DRAW';
-                }
-
-                const creatorWon = bet.pick === outcome;
+                const creatorWon = evaluateMatchBetOutcome(bet, match);
                 const winnerUser = creatorWon ? bet.creator : bet.taker;
                 const loserUser = creatorWon ? bet.taker : bet.creator;
                 const payout = bet.creatorStake + bet.takerStake;
@@ -1302,6 +1775,7 @@
             updateAuthUI();
             renderSummaryStrip();
             renderMatches();
+            renderSpecials();
             renderBetSlip();
             renderOpenMarket();
             renderMyBets();
@@ -1438,19 +1912,90 @@
             const aPos = statsMap[away.id]?.pos;
             const matchOpenBets = openBets.filter(b => b.matchId === m.id);
             const mvp = m.mvpId ? getPlayer(m.mvpId) : null;
+            const isExpanded = Boolean(expandedMatchProps[m.id]);
 
-            const isSel = (pick) => activeSlip && activeSlip.matchId === m.id && activeSlip.pick === pick ? 'is-active' : '';
+            const isSel = (mType, pick, targetId = null, line = null) =>
+                activeSlip &&
+                activeSlip.matchId === m.id &&
+                (activeSlip.marketType || '1X2') === mType &&
+                activeSlip.pick === pick &&
+                (activeSlip.targetId || null) === (targetId || null) &&
+                (activeSlip.line ?? null) === (line ?? null)
+                    ? 'is-active'
+                    : '';
+
+            let propsPanelHtml = '';
+            if (!m.played && isExpanded) {
+                const props = computeMatchPropOdds(m);
+                propsPanelHtml = `
+                    <div class="bg-[#1e1e1e] border border-[#3a3a3a] rounded-lg p-3 space-y-3 mt-2">
+                        <!-- Total de Goles del Partido -->
+                        <div class="space-y-1.5">
+                            <div class="flex items-center justify-between text-[11px]">
+                                <span class="font-bold uppercase tracking-wider text-emerald-400">Total de Goles del Partido</span>
+                                <span class="text-neutral-400">${props.isDynamic ? `Prom. esperado: ${props.expectedGoals} goles` : 'Cuota fija x2.00'}</span>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                ${props.lines.map(l => `
+                                    <div class="bg-[#282828] border border-[#3a3a3a] rounded p-2 space-y-1.5">
+                                        <div class="text-center text-[11px] font-bold text-neutral-300">Línea ${l.line} Goles</div>
+                                        <div class="grid grid-cols-2 gap-1.5">
+                                            <button onclick="selectMatchPropBet('${m.id}', ${isKnockout}, 'TOTAL_GOALS', 'OVER', null, ${l.line}, ${l.overOdd}, 'Más de ${l.line} goles (${home.code}-${away.code})', ${l.probOver}, ${props.isDynamic})" class="odd-btn ${isSel('TOTAL_GOALS', 'OVER', null, l.line)} rounded py-1 px-1.5 text-center">
+                                                <div class="text-[10px] opacity-80">+${l.line}</div>
+                                                <div class="odd-val text-xs">${l.overOdd.toFixed(2)}</div>
+                                            </button>
+                                            <button onclick="selectMatchPropBet('${m.id}', ${isKnockout}, 'TOTAL_GOALS', 'UNDER', null, ${l.line}, ${l.underOdd}, 'Menos de ${l.line} goles (${home.code}-${away.code})', ${100 - l.probOver}, ${props.isDynamic})" class="odd-btn ${isSel('TOTAL_GOALS', 'UNDER', null, l.line)} rounded py-1 px-1.5 text-center">
+                                                <div class="text-[10px] opacity-80">-${l.line}</div>
+                                                <div class="odd-val text-xs">${l.underOdd.toFixed(2)}</div>
+                                            </button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <!-- Goles de Jugador -->
+                        <div class="space-y-1.5">
+                            <div class="text-[11px] font-bold uppercase tracking-wider text-emerald-400">Goles por Jugador en el Partido</div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                ${props.playersOdds.map(po => `
+                                    <div class="bg-[#282828] border border-[#3a3a3a] rounded px-2.5 py-1.5 flex items-center justify-between gap-2">
+                                        <div class="min-w-0">
+                                            <div class="text-xs font-bold text-white truncate">${escHtml(po.player.name)}</div>
+                                            <div class="text-[10px] text-neutral-400">${escHtml(po.team.code)} • ${po.goals} gol${po.goals === 1 ? '' : 'es'} en torneo</div>
+                                        </div>
+                                        <div class="flex items-center space-x-1.5 shrink-0">
+                                            <button onclick="selectMatchPropBet('${m.id}', ${isKnockout}, 'PLAYER_GOALS', 'PLAYER_OVER', '${po.player.id}', 0.5, ${po.odd1}, '${escHtml(po.player.name)} hace +0.5 goles', ${po.prob1}, ${props.isDynamic})" class="odd-btn ${isSel('PLAYER_GOALS', 'PLAYER_OVER', po.player.id, 0.5)} rounded px-2 py-1 text-center">
+                                                <div class="text-[9px] opacity-75">+0.5</div>
+                                                <div class="odd-val text-xs">${po.odd1.toFixed(2)}</div>
+                                            </button>
+                                            <button onclick="selectMatchPropBet('${m.id}', ${isKnockout}, 'PLAYER_GOALS', 'PLAYER_OVER', '${po.player.id}', 1.5, ${po.odd2}, '${escHtml(po.player.name)} hace +1.5 goles', ${po.prob2}, ${props.isDynamic})" class="odd-btn ${isSel('PLAYER_GOALS', 'PLAYER_OVER', po.player.id, 1.5)} rounded px-2 py-1 text-center">
+                                                <div class="text-[9px] opacity-75">+1.5</div>
+                                                <div class="odd-val text-xs">${po.odd2.toFixed(2)}</div>
+                                            </button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
 
             return `
-                <div class="p-3.5 hover:bg-[#2e2e2e] transition space-y-2.5">
+                <div class="p-3.5 hover:bg-[#2e2e2e] transition space-y-2">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <!-- Equipos -->
                         <div class="flex-1 min-w-0 space-y-1.5">
-                            <div class="flex items-center space-x-2 text-[10px] text-neutral-400">
+                            <div class="flex flex-wrap items-center gap-1.5 text-[10px] text-neutral-400">
                                 <span class="uppercase font-semibold">${escHtml(isKnockout ? m.stageName : m.groupName)}</span>
                                 ${m.played
                                     ? `<span class="bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.2 rounded">FINALIZADO</span>`
                                     : `<span class="bg-amber-500/15 text-[#ffdf1b] font-bold px-1.5 py-0.2 rounded">${odds.isDynamic ? 'CUOTA DINÁMICA' : 'CUOTA x2'}</span>`
+                                }
+                                ${!m.played
+                                    ? `<button onclick="toggleMatchProps('${m.id}')" class="bg-[#383838] hover:bg-[#4a4a4a] text-emerald-300 border border-emerald-500/30 font-bold px-2 py-0.2 rounded transition">${isExpanded ? '▲ Ocultar +Goles/Jugadores' : '▼ +Goles y Jugadores'}</button>`
+                                    : ''
                                 }
                                 ${!m.played && matchOpenBets.length > 0
                                     ? `<button onclick="switchView('view-market')" class="bg-[#027b5b] text-white font-bold px-1.5 py-0.2 rounded hover:bg-emerald-600">${matchOpenBets.length} desafío${matchOpenBets.length > 1 ? 's' : ''}</button>`
@@ -1482,17 +2027,17 @@
                         <!-- Botones de Cuotas (1 - X - 2) -->
                         ${!m.played ? `
                             <div class="grid ${isKnockout ? 'grid-cols-2' : 'grid-cols-3'} gap-2 sm:w-60 shrink-0">
-                                <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'HOME')" class="odd-btn ${isSel('HOME')} rounded py-2 px-2 flex flex-col items-center justify-center">
+                                <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'HOME')" class="odd-btn ${isSel('1X2', 'HOME')} rounded py-2 px-2 flex flex-col items-center justify-center">
                                     <span class="text-[10px] opacity-75 font-semibold">${escHtml(home.code)}</span>
                                     <span class="odd-val text-sm">${odds.home.toFixed(2)}</span>
                                 </button>
                                 ${!isKnockout ? `
-                                    <button onclick="selectBetOutcome('${m.id}', false, 'DRAW')" class="odd-btn ${isSel('DRAW')} rounded py-2 px-2 flex flex-col items-center justify-center">
+                                    <button onclick="selectBetOutcome('${m.id}', false, 'DRAW')" class="odd-btn ${isSel('1X2', 'DRAW')} rounded py-2 px-2 flex flex-col items-center justify-center">
                                         <span class="text-[10px] opacity-75 font-semibold">EMP</span>
                                         <span class="odd-val text-sm">${odds.draw.toFixed(2)}</span>
                                     </button>
                                 ` : ''}
-                                <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'AWAY')" class="odd-btn ${isSel('AWAY')} rounded py-2 px-2 flex flex-col items-center justify-center">
+                                <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'AWAY')" class="odd-btn ${isSel('1X2', 'AWAY')} rounded py-2 px-2 flex flex-col items-center justify-center">
                                     <span class="text-[10px] opacity-75 font-semibold">${escHtml(away.code)}</span>
                                     <span class="odd-val text-sm">${odds.away.toFixed(2)}</span>
                                 </button>
@@ -1504,57 +2049,143 @@
                             </div>
                         `}
                     </div>
+                    ${propsPanelHtml}
                 </div>
             `;
         }
 
-        /* --- Mercado de Desafíos Abiertos --- */
+        /* --- Sección Apuestas Especiales del Torneo --- */
+        function renderSpecials() {
+            const container = document.getElementById('specials-container');
+            const badge = document.getElementById('specials-status-badge');
+            if (!container) return;
+
+            const done = isTournamentFinished();
+            if (badge) {
+                badge.textContent = done ? 'Torneo Finalizado' : 'Abiertas para Desafíos 1v1';
+            }
+
+            if (!tournamentState.teams.length) {
+                container.innerHTML = `<div class="lg:col-span-2 bg-[#282828] border border-[#3a3a3a] rounded-lg p-8 text-center text-neutral-400 text-sm">Todavía no hay selecciones inscritas en el torneo.</div>`;
+                return;
+            }
+
+            const sp = computeTournamentSpecials();
+
+            const renderSpecialBox = (title, subtitle, marketType, groupName, options, prefixText) => `
+                <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg overflow-hidden flex flex-col">
+                    <div class="bg-[#027b5b] px-4 py-3 flex items-center justify-between">
+                        <div>
+                            <h3 class="text-sm font-bold text-white uppercase tracking-wider">${escHtml(title)}</h3>
+                            <p class="text-[11px] text-emerald-100">${escHtml(subtitle)}</p>
+                        </div>
+                        <span class="text-[10px] bg-black/25 text-[#ffdf1b] font-bold px-2 py-0.5 rounded">${sp.anyPlayed ? 'DINÁMICA' : 'CUOTA x2'}</span>
+                    </div>
+                    <div class="p-3 space-y-2 max-h-80 overflow-y-auto">
+                        ${options.map(opt => {
+                            const label = `${prefixText}: ${opt.name}`;
+                            return `
+                                <div class="bg-[#1f1f1f] border border-[#363636] rounded px-3 py-2 flex items-center justify-between gap-2">
+                                    <div class="flex items-center space-x-2.5 min-w-0">
+                                        ${flagMarkup(opt.team)}
+                                        <div class="min-w-0">
+                                            <div class="text-xs sm:text-sm font-bold text-white truncate">${escHtml(opt.name)}</div>
+                                            <div class="text-[10px] text-neutral-400 truncate">${escHtml(opt.sub)}</div>
+                                        </div>
+                                    </div>
+                                    <button ${done ? 'disabled' : ''} onclick="selectSpecialBet('${marketType}', ${groupName ? `'${escHtml(groupName)}'` : 'null'}, '${opt.targetId}', ${opt.odd}, '${escHtml(label)}', ${opt.prob}, ${sp.anyPlayed})" class="odd-btn rounded px-3 py-1.5 text-center shrink-0 disabled:opacity-40">
+                                        <span class="odd-val text-xs sm:text-sm">${opt.odd.toFixed(2)}</span>
+                                    </button>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+
+            const groupsHtml = sp.groupWinners.map(gw =>
+                renderSpecialBox(
+                    `1° Puesto — ${gw.groupName}`,
+                    '¿Qué selección termina primera en esta zona?',
+                    'GROUP_WINNER',
+                    gw.groupName,
+                    gw.options,
+                    `1° de ${gw.groupName}`
+                )
+            ).join('');
+
+            container.innerHTML =
+                renderSpecialBox('Campeón del Mundial 3v3', '¿Qué selección levanta la copa?', 'CHAMPION', null, sp.championOptions, 'Campeón') +
+                renderSpecialBox('Máximo Goleador (Bota de Oro)', '¿Qué jugador termina con más goles?', 'TOP_SCORER', null, sp.topScorerOptions.slice(0, 12), 'Goleador del Torneo') +
+                renderSpecialBox('Mejor Jugador (Más MVPs)', '¿Qué jugador gana más premios MVP?', 'TOP_MVP', null, sp.topMvpOptions.slice(0, 12), 'Más MVPs') +
+                groupsHtml;
+        }
+
+        /* --- Bandeja de Desafíos 1v1 (Recibidos y Enviados) --- */
         function renderOpenMarket() {
             const openBets = Object.values(betsMap)
                 .filter(b => b.status === 'OPEN')
                 .sort((a, b) => b.createdAt - a.createdAt);
 
-            document.getElementById('open-bets-badge').textContent = openBets.length;
+            // Desafíos dirigidos al usuario logueado
+            const incomingForMe = currentUser
+                ? openBets.filter(b => b.targetUser === currentUser)
+                : [];
 
-            // Mini lista lateral
+            document.getElementById('open-bets-badge').textContent = incomingForMe.length;
+
+            // Mini lista lateral (muestra los desafíos 1v1 recibidos)
             const mini = document.getElementById('mini-open-bets');
-            if (openBets.length === 0) {
-                mini.innerHTML = `<div class="text-neutral-400 text-center py-3">No hay desafíos esperando rival.</div>`;
+            if (!currentUser) {
+                mini.innerHTML = `<div class="text-neutral-400 text-center py-3">Iniciá sesión para ver tus desafíos 1v1 recibidos.</div>`;
+            } else if (incomingForMe.length === 0) {
+                mini.innerHTML = `<div class="text-neutral-400 text-center py-3">No tenés desafíos 1v1 pendientes de responder.</div>`;
             } else {
-                mini.innerHTML = openBets.slice(0, 4).map(b => `
-                    <div class="bg-[#1f1f1f] border border-[#3a3a3a] rounded p-2.5 space-y-1.5">
+                mini.innerHTML = incomingForMe.slice(0, 4).map(b => `
+                    <div class="bg-[#1f1f1f] border border-[#ffdf1b]/40 rounded p-2.5 space-y-1.5">
                         <div class="flex justify-between text-[11px]">
-                            <span class="font-bold text-white">${escHtml(b.creator)}</span>
+                            <span class="font-bold text-white">De: ${escHtml(b.creator)}</span>
                             <span class="text-[#ffdf1b] font-bold">x${b.odd.toFixed(2)}</span>
                         </div>
                         <div class="text-[11px] text-neutral-300 truncate">${escHtml(b.matchLabel)} — <strong>${escHtml(b.pickLabel)}</strong></div>
-                        <div class="flex items-center justify-between pt-1">
-                            <span class="text-[10px] text-neutral-400">Cubrís ${formatMoney(b.takerStake)} → Ganás ${formatMoney(b.creatorStake + b.takerStake)}</span>
-                            ${b.creator === currentUser
-                                ? `<button onclick="cancelOpenBet('${b.id}')" class="text-[10px] text-rose-400 hover:underline font-bold">Cancelar</button>`
-                                : `<button onclick="acceptP2PBet('${b.id}')" class="bg-[#027b5b] hover:bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-1 rounded">Aceptar</button>`
-                            }
+                        <div class="flex items-center justify-between pt-1 gap-1.5">
+                            <span class="text-[10px] text-neutral-400">Ponés ${formatMoney(b.takerStake)} → Pozo ${formatMoney(b.creatorStake + b.takerStake)}</span>
+                            <div class="flex space-x-1">
+                                <button onclick="rejectP2PBet('${b.id}')" class="bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 text-[10px] font-bold px-2 py-1 rounded">Rechazar</button>
+                                <button onclick="acceptP2PBet('${b.id}')" class="bg-[#027b5b] hover:bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-1 rounded">Aceptar</button>
+                            </div>
                         </div>
                     </div>
                 `).join('');
             }
 
-            // Vista completa del mercado
+            // Vista completa de desafíos 1v1
             const container = document.getElementById('market-bets-list');
-            if (openBets.length === 0) {
+            if (!currentUser) {
                 container.innerHTML = `
-                    <div class="md:col-span-2 bg-[#282828] border border-[#3a3a3a] rounded-lg p-10 text-center text-neutral-400 text-sm">
-                        No hay desafíos abiertos en este momento. Publicá una apuesta desde "Partidos y Apuestas" para desafiar a tus amigos.
+                    <div class="md:col-span-2 bg-[#282828] border border-[#3a3a3a] rounded-lg p-10 text-center space-y-3">
+                        <div class="text-neutral-300 text-sm">Iniciá sesión para ver los desafíos 1v1 que te mandaron o los que enviaste.</div>
+                        <button onclick="openAuthModal('login')" class="bg-[#ffdf1b] text-[#111] font-bold text-xs px-4 py-2 rounded">Iniciar Sesión</button>
                     </div>
                 `;
                 return;
             }
 
-            container.innerHTML = openBets.map(b => {
+            const myPending = openBets.filter(b => b.targetUser === currentUser || b.creator === currentUser);
+            if (myPending.length === 0) {
+                container.innerHTML = `
+                    <div class="md:col-span-2 bg-[#282828] border border-[#3a3a3a] rounded-lg p-10 text-center text-neutral-400 text-sm">
+                        No tenés desafíos 1v1 pendientes. Tocá una cuota en "Partidos" o "Apuestas Especiales" para desafiar a un amigo.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = myPending.map(b => {
                 const pot = b.creatorStake + b.takerStake;
                 const isMine = b.creator === currentUser;
                 return `
-                    <div class="bg-[#282828] border border-[#3d3d3d] rounded-lg p-4 flex flex-col justify-between space-y-3">
+                    <div class="bg-[#282828] border ${isMine ? 'border-[#3d3d3d]' : 'border-[#ffdf1b]/50'} rounded-lg p-4 flex flex-col justify-between space-y-3">
                         <div class="space-y-1">
                             <div class="flex items-center justify-between text-[11px]">
                                 <span class="text-emerald-400 font-bold uppercase">${escHtml(b.meta)}</span>
@@ -1562,18 +2193,22 @@
                             </div>
                             <div class="text-sm font-bold text-white">${escHtml(b.matchLabel)}</div>
                             <div class="text-xs text-neutral-300">
-                                <strong class="text-white">${escHtml(b.creator)}</strong> apostó <strong class="text-[#ffdf1b]">${formatMoney(b.creatorStake)}</strong> a: <span class="underline">${escHtml(b.pickLabel)}</span>
+                                <strong class="text-white">${escHtml(b.creator)}</strong> desafió 1v1 a <strong class="text-[#ffdf1b]">${escHtml(b.targetUser || 'Rival')}</strong>:
+                                <div class="mt-0.5">Pronóstico de ${escHtml(b.creator)}: <span class="underline text-white">${escHtml(b.pickLabel)}</span> (${formatMoney(b.creatorStake)})</div>
                             </div>
                         </div>
 
-                        <div class="bg-[#1e1e1e] rounded p-3 flex items-center justify-between text-xs border border-[#383838]">
+                        <div class="bg-[#1e1e1e] rounded p-3 flex flex-wrap items-center justify-between gap-2 text-xs border border-[#383838]">
                             <div>
-                                <div class="text-neutral-400">Para tomar el lado contrario ponés:</div>
-                                <div class="text-sm font-extrabold text-white">${formatMoney(b.takerStake)} <span class="text-emerald-400 font-bold">(Te llevás ${formatMoney(pot)})</span></div>
+                                <div class="text-neutral-400">${isMine ? `Esperando que ${escHtml(b.targetUser)} acepte:` : 'Para tomar el lado contrario ponés:'}</div>
+                                <div class="text-sm font-extrabold text-white">${formatMoney(b.takerStake)} <span class="text-emerald-400 font-bold">(Pozo total ${formatMoney(pot)})</span></div>
                             </div>
                             ${isMine
-                                ? `<button onclick="cancelOpenBet('${b.id}')" class="bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 border border-rose-500/40 px-3 py-2 rounded font-bold text-xs">Cancelar</button>`
-                                : `<button onclick="acceptP2PBet('${b.id}')" class="bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] px-4 py-2 rounded font-extrabold text-xs shadow">Aceptar Desafío</button>`
+                                ? `<button onclick="cancelOpenBet('${b.id}')" class="bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 border border-rose-500/40 px-3 py-2 rounded font-bold text-xs">Cancelar Envío</button>`
+                                : `<div class="flex space-x-2">
+                                    <button onclick="rejectP2PBet('${b.id}')" class="bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 border border-rose-500/40 px-3 py-2 rounded font-bold text-xs">Rechazar</button>
+                                    <button onclick="acceptP2PBet('${b.id}')" class="bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] px-4 py-2 rounded font-extrabold text-xs shadow">Aceptar 1v1</button>
+                                   </div>`
                             }
                         </div>
                     </div>
@@ -1595,11 +2230,11 @@
             }
 
             let mine = Object.values(betsMap)
-                .filter(b => b.creator === currentUser || b.taker === currentUser)
+                .filter(b => b.creator === currentUser || b.taker === currentUser || b.targetUser === currentUser)
                 .sort((a, b) => b.createdAt - a.createdAt);
 
             if (myBetsFilter === 'ACTIVE') mine = mine.filter(b => b.status === 'OPEN' || b.status === 'MATCHED');
-            if (myBetsFilter === 'SETTLED') mine = mine.filter(b => b.status === 'SETTLED' || b.status === 'REFUNDED');
+            if (myBetsFilter === 'SETTLED') mine = mine.filter(b => b.status === 'SETTLED' || b.status === 'REFUNDED' || b.status === 'REJECTED');
 
             if (mine.length === 0) {
                 container.innerHTML = `<div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-8 text-center text-neutral-400 text-sm">Todavía no tenés apuestas en esta categoría.</div>`;
@@ -1610,11 +2245,12 @@
                 const isCreator = b.creator === currentUser;
                 const myStake = isCreator ? b.creatorStake : b.takerStake;
                 const pot = b.creatorStake + b.takerStake;
-                const rival = isCreator ? (b.taker || 'Esperando rival...') : b.creator;
+                const rival = isCreator ? (b.taker || b.targetUser || 'Rival') : b.creator;
 
-                let statusBadge = `<span class="bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-bold">ABIERTA</span>`;
-                if (b.status === 'MATCHED') statusBadge = `<span class="bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded font-bold">EN JUEGO vs ${escHtml(rival)}</span>`;
+                let statusBadge = `<span class="bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-bold">${isCreator ? `ENVIADA A ${escHtml(rival)}` : `RECIBIDA DE ${escHtml(rival)}`}</span>`;
+                if (b.status === 'MATCHED') statusBadge = `<span class="bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded font-bold">1v1 ACTIVO vs ${escHtml(rival)}</span>`;
                 if (b.status === 'REFUNDED') statusBadge = `<span class="bg-neutral-600/40 text-neutral-300 px-2 py-0.5 rounded font-bold">DEVUELTA</span>`;
+                if (b.status === 'REJECTED') statusBadge = `<span class="bg-neutral-600/40 text-neutral-300 px-2 py-0.5 rounded font-bold">RECHAZADA</span>`;
                 if (b.status === 'SETTLED') {
                     const won = b.winnerUser === currentUser;
                     statusBadge = won
@@ -1632,16 +2268,23 @@
                             <div class="text-sm font-bold text-white">${escHtml(b.matchLabel)}</div>
                             <div class="text-xs text-neutral-300">
                                 Tu posición: <strong class="text-[#ffdf1b]">${isCreator ? escHtml(b.pickLabel) : 'En contra de ' + escHtml(b.pickLabel)}</strong>
-                                <span class="text-neutral-400"> • Rival: ${escHtml(rival)}</span>
+                                <span class="text-neutral-400"> • Rival 1v1: ${escHtml(rival)}</span>
                             </div>
                         </div>
                         <div class="flex items-center justify-between sm:justify-end sm:space-x-5 text-xs">
                             <div class="text-right">
-                                <div class="text-neutral-400">Apostaste: <strong class="text-white">${formatMoney(myStake)}</strong></div>
-                                <div class="text-neutral-400">Pozo total: <strong class="text-emerald-400">${formatMoney(pot)}</strong></div>
+                                <div class="text-neutral-400">Tu apuesta: <strong class="text-white">${formatMoney(myStake)}</strong></div>
+                                <div class="text-neutral-400">Pozo 1v1: <strong class="text-emerald-400">${formatMoney(pot)}</strong></div>
                             </div>
                             ${b.status === 'OPEN' && isCreator
                                 ? `<button onclick="cancelOpenBet('${b.id}')" class="bg-rose-600/20 text-rose-300 border border-rose-500/40 px-3 py-1.5 rounded font-bold">Cancelar</button>`
+                                : ''
+                            }
+                            ${b.status === 'OPEN' && !isCreator && b.targetUser === currentUser
+                                ? `<div class="flex space-x-1.5">
+                                    <button onclick="rejectP2PBet('${b.id}')" class="bg-rose-600/20 text-rose-300 border border-rose-500/40 px-2.5 py-1.5 rounded font-bold">Rechazar</button>
+                                    <button onclick="acceptP2PBet('${b.id}')" class="bg-[#ffdf1b] text-[#111] px-3 py-1.5 rounded font-extrabold">Aceptar</button>
+                                   </div>`
                                 : ''
                             }
                         </div>
@@ -1857,7 +2500,7 @@
             const list = Object.values(usersMap).sort((a, b) => (b.balance || 0) - (a.balance || 0));
 
             if (!list.length) {
-                tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-neutral-400 text-xs">Todavía no hay usuarios registrados.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-neutral-400 text-xs">Todavía no hay usuarios registrados.</td></tr>`;
                 return;
             }
 
@@ -1870,6 +2513,7 @@
                     </td>
                     <td class="py-3 px-4 text-center text-emerald-400 font-semibold">${u.wins || 0}</td>
                     <td class="py-3 px-4 text-center text-rose-400 font-semibold">${u.losses || 0}</td>
+                    <td class="py-3 px-4 text-right text-neutral-400">${formatMoney(u.totalDeposited ?? 0)}</td>
                     <td class="py-3 px-4 text-right font-extrabold text-[#ffdf1b]">${formatMoney(u.balance)}</td>
                 </tr>
             `).join('');
