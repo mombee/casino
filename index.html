@@ -1,0 +1,1881 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>bet3v3 — Protocasino P2P Mundial 26</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- SDK de Firebase (App + Realtime Database) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+    <style>
+        :root {
+            --b365-green: #027b5b;
+            --b365-green-dark: #005440;
+            --b365-yellow: #ffdf1b;
+            --b365-bg: #1e1e1e;
+            --b365-surface: #282828;
+            --b365-card: #333333;
+            --b365-border: #404040;
+            --b365-text: #e5e5e5;
+            --b365-muted: #a3a3a3;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--b365-bg);
+            color: var(--b365-text);
+            margin: 0;
+        }
+
+        .font-sport {
+            font-family: 'Barlow Condensed', sans-serif;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        /* Header estilo bet365 */
+        .b365-header {
+            background-color: var(--b365-green);
+            border-bottom: 2px solid var(--b365-green-dark);
+        }
+
+        .b365-subnav {
+            background-color: #242424;
+            border-bottom: 1px solid #3a3a3a;
+        }
+
+        /* Botón de cuota clásico bet365 */
+        .odd-btn {
+            background-color: #3a3a3a;
+            border: 1px solid #4a4a4a;
+            transition: background-color 0.12s ease, border-color 0.12s ease, transform 0.1s ease;
+        }
+        .odd-btn:hover:not(:disabled) {
+            background-color: #4a4a4a;
+            border-color: var(--b365-yellow);
+        }
+        .odd-btn.is-active {
+            background-color: #e5e5e5;
+            color: #141414;
+            border-color: #ffffff;
+        }
+        .odd-btn.is-active .odd-val {
+            color: #005440;
+        }
+        .odd-val {
+            color: var(--b365-yellow);
+            font-weight: 700;
+        }
+
+        /* Tabs activos */
+        .nav-tab {
+            position: relative;
+            color: #b5b5b5;
+            transition: color 0.15s ease;
+        }
+        .nav-tab:hover {
+            color: #ffffff;
+        }
+        .nav-tab.is-active {
+            color: var(--b365-yellow);
+            font-weight: 700;
+        }
+        .nav-tab.is-active::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -1px;
+            height: 3px;
+            background-color: var(--b365-yellow);
+        }
+
+        /* Forma reciente */
+        .form-dot {
+            display: inline-block;
+            width: 0.6rem;
+            height: 0.6rem;
+            border-radius: 999px;
+            margin: 0 1.5px;
+        }
+
+        /* Scrollbar oscura */
+        ::-webkit-scrollbar {
+            width: 7px;
+            height: 7px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--b365-green);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- ==========================================
+         HEADER PRINCIPAL ESTILO BET365
+    =========================================== -->
+    <header class="b365-header sticky top-0 z-30 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
+            <!-- Logo -->
+            <div class="flex items-center space-x-3 shrink-0">
+                <div class="flex items-baseline select-none">
+                    <span class="text-white font-extrabold text-2xl tracking-tight">bet</span>
+                    <span class="text-[#ffdf1b] font-extrabold text-2xl tracking-tight">3v3</span>
+                </div>
+                <span class="hidden sm:inline-block text-[11px] font-semibold uppercase tracking-wider bg-black/25 text-emerald-100 px-2 py-0.5 rounded">
+                    P2P • Mundial 26
+                </span>
+            </div>
+
+            <!-- Estado de conexión en vivo -->
+            <div class="hidden md:flex items-center space-x-2 text-xs text-emerald-100 bg-black/20 px-3 py-1 rounded-full">
+                <span id="live-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+                <span id="live-status-text">Conectando...</span>
+            </div>
+
+            <!-- Panel de Cuenta de Usuario -->
+            <div class="flex items-center space-x-2">
+                <!-- Sin sesión -->
+                <div id="auth-guest-bar" class="flex items-center space-x-2">
+                    <button onclick="openAuthModal('login')" class="text-xs font-semibold text-white hover:text-[#ffdf1b] px-3 py-1.5 rounded transition">
+                        Iniciar Sesión
+                    </button>
+                    <button onclick="openAuthModal('register')" class="text-xs font-bold bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] px-3.5 py-1.5 rounded shadow-sm transition">
+                        Registrarse
+                    </button>
+                </div>
+
+                <!-- Con sesión -->
+                <div id="auth-user-bar" class="hidden flex items-center space-x-2.5">
+                    <div class="bg-[#004736] border border-emerald-400/30 px-3 py-1 rounded flex items-center space-x-2">
+                        <span class="text-[11px] text-emerald-200 hidden sm:inline">Saldo:</span>
+                        <span id="user-balance-display" class="text-sm font-extrabold text-[#ffdf1b]">$1.000</span>
+                    </div>
+                    <div class="text-right hidden sm:block">
+                        <div id="user-name-display" class="text-xs font-bold text-white leading-tight">usuario</div>
+                        <button onclick="logoutUser()" class="text-[10px] text-emerald-200 hover:text-white underline">Salir</button>
+                    </div>
+                    <button onclick="logoutUser()" class="sm:hidden text-[11px] bg-black/25 text-white px-2.5 py-1.5 rounded font-semibold">
+                        Salir
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Barra de Navegación Secundaria -->
+        <nav class="b365-subnav">
+            <div class="max-w-7xl mx-auto px-4 flex items-center space-x-6 overflow-x-auto text-xs sm:text-sm">
+                <button onclick="switchView('view-matches')" id="tab-view-matches" class="nav-tab is-active py-3 whitespace-nowrap">
+                    Partidos y Apuestas
+                </button>
+                <button onclick="switchView('view-market')" id="tab-view-market" class="nav-tab py-3 whitespace-nowrap flex items-center space-x-1.5">
+                    <span>Desafíos Abiertos</span>
+                    <span id="open-bets-badge" class="bg-[#ffdf1b] text-[#111] text-[10px] font-extrabold px-1.5 py-0.2 rounded-full">0</span>
+                </button>
+                <button onclick="switchView('view-mybets')" id="tab-view-mybets" class="nav-tab py-3 whitespace-nowrap">
+                    Mis Apuestas
+                </button>
+                <button onclick="switchView('view-standings')" id="tab-view-standings" class="nav-tab py-3 whitespace-nowrap">
+                    Posiciones
+                </button>
+                <button onclick="switchView('view-stats')" id="tab-view-stats" class="nav-tab py-3 whitespace-nowrap">
+                    Estadísticas y Goleadores
+                </button>
+                <button onclick="switchView('view-knockout')" id="tab-view-knockout" class="nav-tab py-3 whitespace-nowrap">
+                    Fase Final
+                </button>
+                <button onclick="switchView('view-ranking')" id="tab-view-ranking" class="nav-tab py-3 whitespace-nowrap">
+                    Ranking Usuarios
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Banner Modo Demo (visible solo si Firebase no está configurado) -->
+    <div id="demo-banner" class="hidden bg-amber-500/15 border-b border-amber-500/40 text-amber-200 text-xs px-4 py-2 text-center">
+        <strong>Modo Demo Local:</strong> Pegá tus credenciales de Firebase en <code>FIREBASE_CONFIG</code> dentro del código para conectar en vivo con la página del torneo y compartir apuestas con tus amigos.
+    </div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6">
+
+        <!-- Toast de notificaciones -->
+        <div id="toast" class="fixed bottom-5 right-5 z-50 hidden bg-[#111] text-white px-4 py-3 rounded-lg shadow-2xl border-l-4 border-[#ffdf1b] text-xs sm:text-sm font-medium max-w-sm">
+            <span id="toast-msg"></span>
+        </div>
+
+        <!-- ==========================================
+             VISTA 1: PARTIDOS Y APUESTAS P2P
+        =========================================== -->
+        <div id="view-matches" class="view-section">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+                <!-- Columna Principal: Lista de partidos -->
+                <div class="lg:col-span-8 space-y-4">
+                    <!-- Resumen rápido del torneo (igual que index) -->
+                    <div id="summary-strip" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5"></div>
+
+                    <!-- Barra de filtros de fechas -->
+                    <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2 h-2 rounded-full bg-[#027b5b]"></span>
+                            <span class="text-xs font-bold uppercase tracking-wider text-neutral-300">Jornadas:</span>
+                        </div>
+                        <div id="rounds-filter-bar" class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0"></div>
+                    </div>
+
+                    <!-- Explicación corta de cuotas -->
+                    <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-300">
+                        <div>
+                            <span class="text-[#ffdf1b] font-bold">Sistema P2P:</span> Apostás contra otros usuarios. En los primeros partidos la cuota es <strong class="text-white">2.00</strong>; con 2+ partidos jugados se calcula automáticamente según la tabla.
+                        </div>
+                        <span id="matches-progress-badge" class="bg-[#1e1e1e] border border-[#444] text-emerald-400 font-bold px-2.5 py-0.5 rounded">0 / 0</span>
+                    </div>
+
+                    <!-- Contenedor de Partidos -->
+                    <div id="matches-list" class="space-y-4"></div>
+                </div>
+
+                <!-- Columna Derecha: Boleto de Apuesta (Bet Slip estilo bet365) -->
+                <aside class="lg:col-span-4 lg:sticky lg:top-28 space-y-4">
+                    <div class="bg-[#282828] border border-[#3d3d3d] rounded-lg overflow-hidden shadow-xl">
+                        <div class="bg-[#027b5b] px-4 py-3 flex items-center justify-between">
+                            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Boleto P2P</h2>
+                            <span class="text-[11px] bg-black/25 text-[#ffdf1b] font-bold px-2 py-0.5 rounded">Entre Usuarios</span>
+                        </div>
+
+                        <!-- Sin selección -->
+                        <div id="slip-empty" class="p-6 text-center space-y-2">
+                            <div class="text-neutral-400 text-xs">Hacé clic en una cuota de cualquier partido pendiente para armar tu apuesta y publicarla para que otro usuario la acepte.</div>
+                        </div>
+
+                        <!-- Con selección -->
+                        <div id="slip-form" class="hidden p-4 space-y-4">
+                            <div class="bg-[#1f1f1f] border border-[#3a3a3a] rounded p-3 space-y-1">
+                                <div class="flex items-center justify-between">
+                                    <span id="slip-match-meta" class="text-[10px] font-bold uppercase text-emerald-400">Fecha 1</span>
+                                    <button onclick="clearBetSlip()" class="text-[11px] text-neutral-400 hover:text-white">✕ Quitar</button>
+                                </div>
+                                <div id="slip-match-teams" class="text-xs text-neutral-300 font-medium">Local vs Visitante</div>
+                                <div class="flex items-center justify-between pt-1">
+                                    <span id="slip-pick-label" class="text-sm font-bold text-white">Gana Argentina</span>
+                                    <span id="slip-odd-display" class="text-base font-extrabold text-[#ffdf1b]">2.00</span>
+                                </div>
+                                <div id="slip-prob-note" class="text-[11px] text-neutral-400">Cuota fija inicial (primeros partidos)</div>
+                            </div>
+
+                            <!-- Monto -->
+                            <div class="space-y-2">
+                                <div class="flex justify-between text-xs">
+                                    <label for="slip-stake" class="text-neutral-300 font-semibold">Tu apuesta ($)</label>
+                                    <span class="text-neutral-400">Disponible: <strong id="slip-avail-balance" class="text-white">$0</strong></span>
+                                </div>
+                                <input type="number" id="slip-stake" min="10" step="10" value="100" oninput="updateSlipCalc()" class="w-full bg-[#1a1a1a] border border-[#4a4a4a] focus:border-[#ffdf1b] rounded px-3 py-2 text-sm font-bold text-white outline-none">
+                                <div class="grid grid-cols-4 gap-1.5">
+                                    <button type="button" onclick="setQuickStake(50)" class="bg-[#383838] hover:bg-[#484848] text-xs font-semibold py-1 rounded text-neutral-200">$50</button>
+                                    <button type="button" onclick="setQuickStake(100)" class="bg-[#383838] hover:bg-[#484848] text-xs font-semibold py-1 rounded text-neutral-200">$100</button>
+                                    <button type="button" onclick="setQuickStake(250)" class="bg-[#383838] hover:bg-[#484848] text-xs font-semibold py-1 rounded text-neutral-200">$250</button>
+                                    <button type="button" onclick="setQuickStake(500)" class="bg-[#383838] hover:bg-[#484848] text-xs font-semibold py-1 rounded text-neutral-200">$500</button>
+                                </div>
+                            </div>
+
+                            <!-- Desglose P2P -->
+                            <div class="bg-[#1f1f1f] rounded p-3 space-y-1.5 text-xs border border-[#383838]">
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-400">Otro usuario deberá cubrir:</span>
+                                    <span id="slip-counter-stake" class="font-bold text-neutral-200">$100</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-neutral-400">Pozo total del cruce:</span>
+                                    <span id="slip-total-pot" class="font-bold text-white">$200</span>
+                                </div>
+                                <div class="flex justify-between pt-1.5 border-t border-[#333]">
+                                    <span class="text-neutral-300 font-semibold">Ganancia neta si acertás:</span>
+                                    <span id="slip-net-profit" class="font-extrabold text-[#00e676]">+$100</span>
+                                </div>
+                            </div>
+
+                            <button onclick="placeP2PBet()" class="w-full bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] font-extrabold text-sm py-2.5 rounded shadow transition">
+                                Publicar Apuesta P2P
+                            </button>
+                            <p class="text-[11px] text-neutral-400 text-center leading-snug">
+                                Si nadie acepta tu apuesta antes de que termine el partido, se te devuelve el 100% automáticamente.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Mini caja de desafíos abiertos recientes -->
+                    <div class="bg-[#282828] border border-[#3d3d3d] rounded-lg overflow-hidden">
+                        <div class="px-4 py-2.5 bg-[#303030] border-b border-[#3d3d3d] flex items-center justify-between">
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-neutral-200">Últimos Desafíos Abiertos</h3>
+                            <button onclick="switchView('view-market')" class="text-[11px] text-[#ffdf1b] hover:underline font-semibold">Ver todos</button>
+                        </div>
+                        <div id="mini-open-bets" class="p-3 space-y-2 text-xs"></div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             VISTA 2: MERCADO DE DESAFÍOS ABIERTOS (P2P)
+        =========================================== -->
+        <div id="view-market" class="view-section hidden space-y-4">
+            <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                    <h2 class="text-lg font-bold text-white">Mercado P2P — Desafíos Abiertos</h2>
+                    <p class="text-xs text-neutral-400">Aceptá la apuesta de otro usuario tomando el lado contrario. Si su pronóstico falla, te llevás el pozo entero.</p>
+                </div>
+            </div>
+            <div id="market-bets-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </div>
+
+        <!-- ==========================================
+             VISTA 3: MIS APUESTAS
+        =========================================== -->
+        <div id="view-mybets" class="view-section hidden space-y-4">
+            <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                    <h2 class="text-lg font-bold text-white">Mis Apuestas</h2>
+                    <p class="text-xs text-neutral-400">Seguimiento en tiempo real de tus apuestas publicadas, aceptadas y liquidadas.</p>
+                </div>
+                <div class="flex space-x-2 text-xs">
+                    <button onclick="setMyBetsFilter('ALL')" id="mybets-f-ALL" class="px-3 py-1 rounded bg-[#027b5b] text-white font-bold">Todas</button>
+                    <button onclick="setMyBetsFilter('ACTIVE')" id="mybets-f-ACTIVE" class="px-3 py-1 rounded bg-[#383838] text-neutral-300 font-semibold">Activas</button>
+                    <button onclick="setMyBetsFilter('SETTLED')" id="mybets-f-SETTLED" class="px-3 py-1 rounded bg-[#383838] text-neutral-300 font-semibold">Finalizadas</button>
+                </div>
+            </div>
+            <div id="mybets-list" class="space-y-3"></div>
+        </div>
+
+        <!-- ==========================================
+             VISTA 4: TABLA DE POSICIONES (COMPLETA)
+        =========================================== -->
+        <div id="view-standings" class="view-section hidden space-y-5">
+            <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                    <h2 class="text-lg font-bold text-white">Tabla de Posiciones Oficial</h2>
+                    <p class="text-xs text-neutral-400">Sincronizada en tiempo real con el torneo. Estas estadísticas alimentan las cuotas dinámicas.</p>
+                </div>
+                <span id="qualification-legend" class="text-xs bg-[#027b5b]/30 border border-[#027b5b] text-emerald-300 font-semibold px-3 py-1.5 rounded"></span>
+            </div>
+            <div id="standings-container" class="space-y-6"></div>
+        </div>
+
+        <!-- ==========================================
+             VISTA 5: ESTADÍSTICAS, RÉCORDS, GOLEADORES Y MVP
+        =========================================== -->
+        <div id="view-stats" class="view-section hidden space-y-6">
+            <div id="records-container" class="grid grid-cols-2 lg:grid-cols-4 gap-3"></div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Bota de Oro -->
+                <div class="lg:col-span-2 bg-[#282828] border border-[#3a3a3a] rounded-lg overflow-hidden">
+                    <div class="bg-[#027b5b] px-4 py-3 flex justify-between items-center">
+                        <h3 class="text-sm font-bold text-white uppercase tracking-wider">Goleadores (Bota de Oro)</h3>
+                        <span class="text-[11px] text-[#ffdf1b] font-semibold">Fase Regular + Finales</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                            <thead>
+                                <tr class="bg-[#222] text-neutral-400 uppercase text-[11px] border-b border-[#3a3a3a]">
+                                    <th class="py-2.5 px-4 w-12 text-center">Pos</th>
+                                    <th class="py-2.5 px-4">Jugador</th>
+                                    <th class="py-2.5 px-4">Selección</th>
+                                    <th class="py-2.5 px-4 text-center">Goles</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scorers-tbody" class="divide-y divide-[#333]"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Ranking MVP -->
+                <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg overflow-hidden">
+                    <div class="bg-[#027b5b] px-4 py-3">
+                        <h3 class="text-sm font-bold text-white uppercase tracking-wider">Player of the Match (MVP)</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                            <thead>
+                                <tr class="bg-[#222] text-neutral-400 uppercase text-[11px] border-b border-[#3a3a3a]">
+                                    <th class="py-2.5 px-4">Jugador</th>
+                                    <th class="py-2.5 px-4 text-center">MVPs</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mvp-tbody" class="divide-y divide-[#333]"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             VISTA 6: FASE FINAL (ELIMINATORIAS)
+        =========================================== -->
+        <div id="view-knockout" class="view-section hidden space-y-5">
+            <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-4">
+                <h2 class="text-lg font-bold text-white">Fase Final — Eliminatorias</h2>
+                <p class="text-xs text-neutral-400">Cuadro eliminatorio en vivo. En esta fase las apuestas definen qué equipo avanza (incluye penales).</p>
+            </div>
+
+            <div id="champion-banner" class="hidden bg-gradient-to-r from-[#005440] via-[#027b5b] to-[#005440] border-2 border-[#ffdf1b] rounded-lg p-6 text-center space-y-1 shadow-xl">
+                <div class="text-[11px] uppercase tracking-widest font-extrabold text-[#ffdf1b]">Campeón Mundial 3v3</div>
+                <div id="champion-name" class="font-sport text-5xl font-extrabold text-white"></div>
+                <div id="champion-players" class="text-xs text-emerald-100"></div>
+            </div>
+
+            <div id="knockout-container" class="grid grid-cols-1 md:grid-cols-3 gap-5"></div>
+        </div>
+
+        <!-- ==========================================
+             VISTA 7: RANKING DE USUARIOS DEL CASINO
+        =========================================== -->
+        <div id="view-ranking" class="view-section hidden space-y-4">
+            <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-4">
+                <h2 class="text-lg font-bold text-white">Ranking de Apostadores</h2>
+                <p class="text-xs text-neutral-400">Todos arrancan con $1.000 fichas. El saldo refleja lo disponible + en juego.</p>
+            </div>
+            <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                        <thead>
+                            <tr class="bg-[#222] text-neutral-400 uppercase text-[11px] border-b border-[#3a3a3a]">
+                                <th class="py-3 px-4 w-12 text-center">#</th>
+                                <th class="py-3 px-4">Usuario</th>
+                                <th class="py-3 px-4 text-center">Ganadas</th>
+                                <th class="py-3 px-4 text-center">Perdidas</th>
+                                <th class="py-3 px-4 text-right">Saldo Disponible</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ranking-tbody" class="divide-y divide-[#333]"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ==========================================
+         MODAL: INICIAR SESIÓN / REGISTRARSE
+    =========================================== -->
+    <div id="auth-modal" class="fixed inset-0 bg-black/75 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#282828] border border-[#444] rounded-xl max-w-sm w-full overflow-hidden shadow-2xl">
+            <div class="bg-[#027b5b] px-5 py-3.5 flex items-center justify-between">
+                <h3 id="auth-modal-title" class="text-sm font-bold text-white uppercase tracking-wider">Iniciar Sesión</h3>
+                <button onclick="closeAuthModal()" class="text-emerald-100 hover:text-white text-lg leading-none">&times;</button>
+            </div>
+            <form onsubmit="handleAuthSubmit(event)" class="p-5 space-y-4">
+                <div class="grid grid-cols-2 bg-[#1e1e1e] p-1 rounded border border-[#3a3a3a] text-xs font-bold">
+                    <button type="button" id="auth-tab-login" onclick="setAuthMode('login')" class="py-1.5 rounded bg-[#027b5b] text-white">Ingresar</button>
+                    <button type="button" id="auth-tab-register" onclick="setAuthMode('register')" class="py-1.5 rounded text-neutral-400">Crear Cuenta</button>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-xs font-semibold text-neutral-300">Nombre de usuario</label>
+                    <input type="text" id="auth-username" required minlength="3" maxlength="16" autocomplete="username" placeholder="Ej: juan_99" class="w-full bg-[#1a1a1a] border border-[#4a4a4a] focus:border-[#ffdf1b] rounded px-3 py-2 text-sm text-white outline-none">
+                    <p class="text-[10px] text-neutral-400">Solo letras, números o guión bajo (sin espacios).</p>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-xs font-semibold text-neutral-300">Contraseña</label>
+                    <input type="password" id="auth-password" required minlength="4" autocomplete="current-password" placeholder="Mínimo 4 caracteres" class="w-full bg-[#1a1a1a] border border-[#4a4a4a] focus:border-[#ffdf1b] rounded px-3 py-2 text-sm text-white outline-none">
+                </div>
+
+                <div id="auth-register-note" class="hidden text-[11px] bg-[#027b5b]/20 border border-[#027b5b] text-emerald-200 p-2.5 rounded">
+                    Al registrarte recibís <strong>$1.000 fichas gratis</strong> para apostar contra otros usuarios.
+                </div>
+
+                <button type="submit" id="auth-submit-btn" class="w-full bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] font-extrabold text-sm py-2.5 rounded shadow transition">
+                    Entrar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        /* ==========================================================================
+           1. CONFIGURACIÓN DE FIREBASE (PEGAR LOS MISMOS DATOS QUE EN index_2.html)
+           ========================================================================== */
+       const firebaseConfig = {
+  apiKey: "AIzaSyCIEPatrfjAIJlksl8hkPwz_76UUdAl66M",
+  authDomain: "torneo3v3mombe.firebaseapp.com",
+  databaseURL: "https://torneo3v3mombe-default-rtdb.firebaseio.com",
+  projectId: "torneo3v3mombe",
+  storageBucket: "torneo3v3mombe.firebasestorage.app",
+  messagingSenderId: "713112221266",
+  appId: "1:713112221266:web:e73fe3cc5d53426ce8d18b",
+  measurementId: "G-7W4CSF2VDS"
+};
+
+        const STARTING_BALANCE = 1000;
+        let firebaseDb = null;
+        let isDemoMode = false;
+
+        /* ==========================================================================
+           2. ESTADO LOCAL SINCRONIZADO
+           ========================================================================== */
+        let tournamentState = {
+            status: 'SETUP',
+            format: 'LEAGUE',
+            leagueQualifiers: 4,
+            cupGroupsCount: 2,
+            cupQualifiersPerGroup: 2,
+            teams: [],
+            groups: [],
+            matches: [],
+            knockoutMatches: []
+        };
+
+        let usersMap = {}; // username -> { username, passHash, balance, wins, losses, createdAt }
+        let betsMap = {};  // betId -> { id, matchId, isKnockout, pick, pickLabel, odd, creator, creatorStake, taker, takerStake, status, winnerUser, createdAt }
+        let currentUser = null; // username string
+
+        let selectedRoundFilter = 'ALL';
+        let myBetsFilter = 'ALL';
+        let activeSlip = null; // { matchId, isKnockout, pick, pickLabel, odd, probText }
+        let authMode = 'login';
+
+        /* ==========================================================================
+           3. RECURSOS VISUALES DE SELECCIONES (MISMOS QUE EN index_2.html)
+           ========================================================================== */
+        const FLAG_ISO = {
+            ARG: 'ar', BRA: 'br', URU: 'uy', FRA: 'fr', ESP: 'es', GER: 'de', ITA: 'it',
+            ENG: 'gb-eng', POR: 'pt', NED: 'nl', COL: 'co', CRO: 'hr', MAR: 'ma', JPN: 'jp',
+            MEX: 'mx', USA: 'us', CAN: 'ca', CHL: 'cl', AYB: 'ag', BEL: 'be', SUI: 'ch',
+            DEN: 'dk', SWE: 'se', NOR: 'no', POL: 'pl', AUT: 'at', SCO: 'gb-sct', WAL: 'gb-wls',
+            TUR: 'tr', SRB: 'rs', UKR: 'ua', CZE: 'cz', HUN: 'hu', GRE: 'gr', IRL: 'ie',
+            SEN: 'sn', NGA: 'ng', EGY: 'eg', ALG: 'dz', TUN: 'tn', CMR: 'cm', GHA: 'gh',
+            CIV: 'ci', RSA: 'za', CPV: 'cv', PAR: 'py', ECU: 'ec', PER: 'pe', BOL: 'bo',
+            VEN: 've', CRC: 'cr', PAN: 'pa', JAM: 'jm', HON: 'hn', HAI: 'ht', CUW: 'cw',
+            KOR: 'kr', IRN: 'ir', AUS: 'au', KSA: 'sa', QAT: 'qa', UZB: 'uz', JOR: 'jo',
+            NZL: 'nz', CHN: 'cn'
+        };
+
+        function escHtml(str) {
+            return String(str || '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+        }
+
+        function flagMarkup(team, cls = 'w-5 h-3.5') {
+            if (!team) return '';
+            const code = String(team.code || '').slice(0, 3).toUpperCase();
+            const iso = String(team.flag || FLAG_ISO[team.code] || '').toLowerCase();
+            if (!/^[a-z]{2}(-[a-z]{2,3})?$/.test(iso)) {
+                return `<span class="text-[10px] font-bold px-1 py-0.5 rounded bg-neutral-700 text-white">${code}</span>`;
+            }
+            return `<img src="https://flagcdn.com/w40/${iso}.png" alt="${escHtml(team.name)}" class="${cls} object-cover rounded-[2px] border border-black/40 inline-block shrink-0" loading="lazy" onerror="this.replaceWith(document.createTextNode('${code}'))">`;
+        }
+
+        function formatMoney(n) {
+            return '$' + Math.round(Number(n) || 0).toLocaleString('es-AR');
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            t.classList.remove('hidden');
+            clearTimeout(window._toastTimer);
+            window._toastTimer = setTimeout(() => t.classList.add('hidden'), 3400);
+        }
+
+        function uid() {
+            return 'bet_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
+        }
+
+        // Hash simple determinístico para contraseña (sin guardar texto plano)
+        async function hashPassword(str) {
+            try {
+                if (window.crypto && crypto.subtle) {
+                    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str + '::bet3v3'));
+                    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+                }
+            } catch (e) {}
+            let h = 2166136261;
+            for (let i = 0; i < str.length; i++) {
+                h ^= str.charCodeAt(i);
+                h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
+            }
+            return (h >>> 0).toString(16);
+        }
+
+        /* ==========================================================================
+           4. INICIALIZACIÓN DE FIREBASE Y MODO DEMO
+           ========================================================================== */
+        function setConnectionStatus(connected, text) {
+            const dot = document.getElementById('live-dot');
+            const lbl = document.getElementById('live-status-text');
+            if (dot) dot.className = `w-2 h-2 rounded-full ${connected ? 'bg-[#00e676] animate-pulse' : 'bg-amber-400'}`;
+            if (lbl) lbl.textContent = text;
+        }
+
+        function initApp() {
+            const savedUser = localStorage.getItem('bet3v3_session_user');
+            if (savedUser) currentUser = savedUser;
+
+            const isConfigured = typeof firebase !== 'undefined' &&
+                FIREBASE_CONFIG.databaseURL &&
+                !FIREBASE_CONFIG.databaseURL.includes('PEGAR_TU_PROJECT_ID');
+
+            if (!isConfigured) {
+                isDemoMode = true;
+                document.getElementById('demo-banner').classList.remove('hidden');
+                setConnectionStatus(false, 'Modo Demo Local');
+                loadDemoFallback();
+                renderAll();
+                return;
+            }
+
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(FIREBASE_CONFIG);
+                }
+                firebaseDb = firebase.database();
+                setConnectionStatus(true, 'En Vivo • Firebase');
+
+                // 1) Escuchar el torneo en vivo desde la página index_2.html
+                firebaseDb.ref('torneo3v3/state').on('value', (snap) => {
+                    const data = snap.val();
+                    if (data) {
+                        tournamentState = {
+                            status: data.status || 'SETUP',
+                            format: data.format || 'LEAGUE',
+                            leagueQualifiers: data.leagueQualifiers ?? 4,
+                            cupGroupsCount: data.cupGroupsCount ?? 2,
+                            cupQualifiersPerGroup: data.cupQualifiersPerGroup ?? 2,
+                            teams: Array.isArray(data.teams) ? data.teams : [],
+                            groups: Array.isArray(data.groups) ? data.groups : [],
+                            matches: Array.isArray(data.matches) ? data.matches : [],
+                            knockoutMatches: Array.isArray(data.knockoutMatches) ? data.knockoutMatches : []
+                        };
+                        checkAndSettleFinishedMatches();
+                        renderAll();
+                    }
+                }, (err) => {
+                    console.error('Error leyendo torneo3v3:', err);
+                    setConnectionStatus(false, 'Error de permisos');
+                });
+
+                // 2) Escuchar usuarios del protocasino
+                firebaseDb.ref('protocasino/users').on('value', (snap) => {
+                    usersMap = snap.val() || {};
+                    if (currentUser && !usersMap[currentUser]) {
+                        currentUser = null;
+                        localStorage.removeItem('bet3v3_session_user');
+                    }
+                    updateAuthUI();
+                    renderRanking();
+                    updateSlipCalc();
+                });
+
+                // 3) Escuchar apuestas P2P en vivo
+                firebaseDb.ref('protocasino/bets').on('value', (snap) => {
+                    betsMap = snap.val() || {};
+                    checkAndSettleFinishedMatches();
+                    renderAll();
+                });
+            } catch (err) {
+                console.error('Error iniciando Firebase:', err);
+                setConnectionStatus(false, 'Error de conexión');
+            }
+        }
+
+        // Datos de ejemplo solo si todavía no se configuró Firebase (para poder ver la interfaz)
+        function loadDemoFallback() {
+            const localTourney = localStorage.getItem('torneo3v3_state');
+            if (localTourney) {
+                try {
+                    tournamentState = JSON.parse(localTourney);
+                } catch (e) {}
+            }
+            if (!tournamentState.teams || tournamentState.teams.length === 0) {
+                tournamentState = {
+                    status: 'ACTIVE',
+                    format: 'LEAGUE',
+                    leagueQualifiers: 4,
+                    teams: [
+                        { id: 't1', name: 'Argentina', code: 'ARG', colorBg: '#38bdf8', colorText: '#fff', players: [{ id: 'p1', name: 'Mombe' }, { id: 'p2', name: 'Suarez' }, { id: 'p3', name: 'Sebas' }] },
+                        { id: 't2', name: 'España', code: 'ESP', colorBg: '#dc2626', colorText: '#facc15', players: [{ id: 'p4', name: 'Chino' }, { id: 'p5', name: 'Amadey' }, { id: 'p6', name: 'Malagreca' }] },
+                        { id: 't3', name: 'Italia', code: 'ITA', colorBg: '#2563eb', colorText: '#fff', players: [{ id: 'p7', name: 'Cufa' }, { id: 'p8', name: 'Bourguet' }, { id: 'p9', name: 'Beto' }] },
+                        { id: 't4', name: 'Croacia', code: 'CRO', colorBg: '#ef4444', colorText: '#fff', players: [{ id: 'p10', name: 'Kiki' }, { id: 'p11', name: 'Cracco' }, { id: 'p12', name: 'Ema' }] }
+                    ],
+                    groups: [{ name: 'Liga General', teamIds: ['t1', 't2', 't3', 't4'] }],
+                    matches: [
+                        { id: 'm1', groupName: 'Liga General', round: 1, homeId: 't1', awayId: 't2', played: true, homeScore: 3, awayScore: 1, goals: { p1: 2, p2: 1, p4: 1 }, mvpId: 'p1' },
+                        { id: 'm2', groupName: 'Liga General', round: 1, homeId: 't3', awayId: 't4', played: true, homeScore: 2, awayScore: 2, goals: { p7: 2, p10: 1, p11: 1 }, mvpId: 'p7' },
+                        { id: 'm3', groupName: 'Liga General', round: 2, homeId: 't1', awayId: 't3', played: true, homeScore: 4, awayScore: 0, goals: { p1: 2, p3: 2 }, mvpId: 'p1' },
+                        { id: 'm4', groupName: 'Liga General', round: 2, homeId: 't2', awayId: 't4', played: true, homeScore: 1, awayScore: 2, goals: { p5: 1, p10: 2 }, mvpId: 'p10' },
+                        { id: 'm5', groupName: 'Liga General', round: 3, homeId: 't1', awayId: 't4', played: false, homeScore: 0, awayScore: 0, goals: {}, mvpId: '' },
+                        { id: 'm6', groupName: 'Liga General', round: 3, homeId: 't2', awayId: 't3', played: false, homeScore: 0, awayScore: 0, goals: {}, mvpId: '' }
+                    ],
+                    knockoutMatches: []
+                };
+            }
+            const savedDemoUsers = localStorage.getItem('bet3v3_demo_users');
+            const savedDemoBets = localStorage.getItem('bet3v3_demo_bets');
+            usersMap = savedDemoUsers ? JSON.parse(savedDemoUsers) : {};
+            betsMap = savedDemoBets ? JSON.parse(savedDemoBets) : {};
+        }
+
+        function saveDemoLocal() {
+            if (!isDemoMode) return;
+            localStorage.setItem('bet3v3_demo_users', JSON.stringify(usersMap));
+            localStorage.setItem('bet3v3_demo_bets', JSON.stringify(betsMap));
+        }
+
+        /* ==========================================================================
+           5. CUENTAS DE USUARIO (SIMPLE: USUARIO + CONTRASEÑA, SIN MAIL)
+           ========================================================================== */
+        function openAuthModal(mode = 'login') {
+            setAuthMode(mode);
+            document.getElementById('auth-modal').classList.remove('hidden');
+            document.getElementById('auth-username').focus();
+        }
+
+        function closeAuthModal() {
+            document.getElementById('auth-modal').classList.add('hidden');
+            document.getElementById('auth-password').value = '';
+        }
+
+        function setAuthMode(mode) {
+            authMode = mode;
+            const isReg = mode === 'register';
+            document.getElementById('auth-modal-title').textContent = isReg ? 'Crear Cuenta' : 'Iniciar Sesión';
+            document.getElementById('auth-submit-btn').textContent = isReg ? 'Registrarme (+$1.000)' : 'Entrar';
+            document.getElementById('auth-register-note').classList.toggle('hidden', !isReg);
+
+            document.getElementById('auth-tab-login').className = `py-1.5 rounded ${!isReg ? 'bg-[#027b5b] text-white' : 'text-neutral-400'}`;
+            document.getElementById('auth-tab-register').className = `py-1.5 rounded ${isReg ? 'bg-[#027b5b] text-white' : 'text-neutral-400'}`;
+        }
+
+        async function handleAuthSubmit(e) {
+            e.preventDefault();
+            const rawUser = document.getElementById('auth-username').value.trim().toLowerCase();
+            const pass = document.getElementById('auth-password').value;
+
+            if (!/^[a-z0-9_]{3,16}$/.test(rawUser)) {
+                showToast('Usuario inválido: usá 3 a 16 letras, números o "_".');
+                return;
+            }
+            if (pass.length < 4) {
+                showToast('La contraseña debe tener al menos 4 caracteres.');
+                return;
+            }
+
+            const passHash = await hashPassword(pass);
+
+            if (authMode === 'register') {
+                if (usersMap[rawUser]) {
+                    showToast('Ese nombre de usuario ya existe. Elegí otro o iniciá sesión.');
+                    return;
+                }
+                const newUser = {
+                    username: rawUser,
+                    passHash,
+                    balance: STARTING_BALANCE,
+                    wins: 0,
+                    losses: 0,
+                    createdAt: Date.now()
+                };
+                if (isDemoMode) {
+                    usersMap[rawUser] = newUser;
+                    saveDemoLocal();
+                } else {
+                    await firebaseDb.ref('protocasino/users/' + rawUser).set(newUser);
+                }
+                currentUser = rawUser;
+                localStorage.setItem('bet3v3_session_user', rawUser);
+                closeAuthModal();
+                updateAuthUI();
+                renderAll();
+                showToast(`¡Bienvenido ${rawUser}! Arrancás con ${formatMoney(STARTING_BALANCE)}.`);
+            } else {
+                const existing = usersMap[rawUser];
+                if (!existing) {
+                    showToast('Usuario no encontrado. Creá una cuenta primero.');
+                    return;
+                }
+                if (existing.passHash !== passHash) {
+                    showToast('Contraseña incorrecta.');
+                    return;
+                }
+                currentUser = rawUser;
+                localStorage.setItem('bet3v3_session_user', rawUser);
+                closeAuthModal();
+                updateAuthUI();
+                renderAll();
+                showToast(`Sesión iniciada como ${rawUser}.`);
+            }
+        }
+
+        function logoutUser() {
+            currentUser = null;
+            localStorage.removeItem('bet3v3_session_user');
+            updateAuthUI();
+            renderAll();
+            showToast('Cerraste sesión.');
+        }
+
+        function updateAuthUI() {
+            const guestBar = document.getElementById('auth-guest-bar');
+            const userBar = document.getElementById('auth-user-bar');
+            const u = currentUser ? usersMap[currentUser] : null;
+
+            if (u) {
+                guestBar.classList.add('hidden');
+                userBar.classList.remove('hidden');
+                document.getElementById('user-name-display').textContent = u.username;
+                document.getElementById('user-balance-display').textContent = formatMoney(u.balance);
+            } else {
+                guestBar.classList.remove('hidden');
+                userBar.classList.add('hidden');
+            }
+        }
+
+        /* ==========================================================================
+           6. ESTADÍSTICAS DEL TORNEO Y CÁLCULO DINÁMICO DE PROBABILIDADES / CUOTAS
+           ========================================================================== */
+        function getTeam(id) {
+            return tournamentState.teams.find(t => t.id === id);
+        }
+
+        function getPlayer(playerId) {
+            for (const t of tournamentState.teams) {
+                const p = (t.players || []).find(pl => pl.id === playerId);
+                if (p) return { ...p, team: t };
+            }
+            return null;
+        }
+
+        function calculateGroupStandings(group) {
+            const stats = {};
+            (group.teamIds || []).forEach(id => {
+                const t = getTeam(id);
+                if (t) {
+                    stats[id] = { team: t, pj: 0, pg: 0, pe: 0, pp: 0, gf: 0, gc: 0, dg: 0, pts: 0, form: [] };
+                }
+            });
+
+            const groupMatches = tournamentState.matches
+                .filter(m => m.groupName === group.name && m.played)
+                .sort((a, b) => (a.round || 1) - (b.round || 1));
+
+            groupMatches.forEach(m => {
+                const h = stats[m.homeId];
+                const a = stats[m.awayId];
+                if (!h || !a) return;
+
+                h.pj++; a.pj++;
+                h.gf += m.homeScore; h.gc += m.awayScore;
+                a.gf += m.awayScore; a.gc += m.homeScore;
+
+                if (m.homeScore > m.awayScore) {
+                    h.pg++; h.pts += 3; a.pp++;
+                    h.form.push('V'); a.form.push('D');
+                } else if (m.awayScore > m.homeScore) {
+                    a.pg++; a.pts += 3; h.pp++;
+                    a.form.push('V'); h.form.push('D');
+                } else {
+                    h.pe++; a.pe++; h.pts += 1; a.pts += 1;
+                    h.form.push('E'); a.form.push('E');
+                }
+            });
+
+            Object.values(stats).forEach(s => { s.dg = s.gf - s.gc; });
+
+            return Object.values(stats).sort((a, b) => {
+                if (b.pts !== a.pts) return b.pts - a.pts;
+                if (b.dg !== a.dg) return b.dg - a.dg;
+                return b.gf - a.gf;
+            });
+        }
+
+        // Mapa rápido de rendimiento global por equipo (para calcular cuotas)
+        function getAllTeamsStatsMap() {
+            const map = {};
+            tournamentState.groups.forEach(g => {
+                calculateGroupStandings(g).forEach((row, idx) => {
+                    map[row.team.id] = { ...row, pos: idx + 1 };
+                });
+            });
+            return map;
+        }
+
+        /**
+         * Calcula cuotas P2P justas (sin margen de la casa):
+         * - Si alguno de los equipos jugó menos de 2 partidos -> cuota fija 2.00 (primeros partidos)
+         * - Si ya hay datos (>= 2 PJ ambos) -> calcula probabilidades según puntos/partido, DG y racha
+         */
+        function computeMatchOdds(match, isKnockout) {
+            const statsMap = getAllTeamsStatsMap();
+            const h = statsMap[match.homeId];
+            const a = statsMap[match.awayId];
+
+            // Primeros partidos: pago x2.00 siempre
+            if (!h || !a || h.pj < 2 || a.pj < 2) {
+                return {
+                    isDynamic: false,
+                    home: 2.00,
+                    draw: isKnockout ? null : 2.00,
+                    away: 2.00,
+                    probHome: isKnockout ? 50 : 33,
+                    probDraw: isKnockout ? 0 : 34,
+                    probAway: isKnockout ? 50 : 33
+                };
+            }
+
+            const teamPower = (s) => {
+                const ppg = s.pts / s.pj; // 0..3
+                const gdpg = Math.max(-3, Math.min(3, s.dg / s.pj));
+                const recent = (s.form || []).slice(-3);
+                const formAvg = recent.length
+                    ? recent.reduce((acc, r) => acc + (r === 'V' ? 1 : r === 'E' ? 0.5 : 0), 0) / recent.length
+                    : 0.5;
+                return 50 + (ppg * 12) + (gdpg * 6) + (formAvg * 10);
+            };
+
+            const diff = teamPower(h) - teamPower(a);
+            const homeShare = 1 / (1 + Math.exp(-diff / 18));
+
+            const clampOdd = (val, min, max) => Number(Math.max(min, Math.min(max, val)).toFixed(2));
+
+            if (isKnockout) {
+                const pHome = Math.max(0.15, Math.min(0.85, homeShare));
+                const pAway = 1 - pHome;
+                return {
+                    isDynamic: true,
+                    home: clampOdd(1 / pHome, 1.20, 5.50),
+                    draw: null,
+                    away: clampOdd(1 / pAway, 1.20, 5.50),
+                    probHome: Math.round(pHome * 100),
+                    probDraw: 0,
+                    probAway: Math.round(pAway * 100)
+                };
+            }
+
+            // En fase regular existe el empate
+            const pDraw = Math.max(0.14, 0.24 - Math.abs(diff) * 0.0022);
+            const pHome = (1 - pDraw) * homeShare;
+            const pAway = (1 - pDraw) * (1 - homeShare);
+
+            return {
+                isDynamic: true,
+                home: clampOdd(1 / pHome, 1.25, 6.00),
+                draw: clampOdd(1 / pDraw, 2.20, 5.00),
+                away: clampOdd(1 / pAway, 1.25, 6.00),
+                probHome: Math.round(pHome * 100),
+                probDraw: Math.round(pDraw * 100),
+                probAway: Math.round(pAway * 100)
+            };
+        }
+
+        /* ==========================================================================
+           7. LÓGICA DE APUESTAS P2P (CREAR, ACEPTAR, CANCELAR Y LIQUIDAR)
+           ========================================================================== */
+        function selectBetOutcome(matchId, isKnockout, pick) {
+            const list = isKnockout ? tournamentState.knockoutMatches : tournamentState.matches;
+            const match = list.find(m => m.id === matchId);
+            if (!match || match.played) return;
+
+            const home = getTeam(match.homeId);
+            const away = getTeam(match.awayId);
+            if (!home || !away) return;
+
+            const odds = computeMatchOdds(match, isKnockout);
+            let odd = odds.home;
+            let pickLabel = `Gana ${home.name}`;
+            let probVal = odds.probHome;
+
+            if (pick === 'DRAW') {
+                odd = odds.draw;
+                pickLabel = 'Empate';
+                probVal = odds.probDraw;
+            } else if (pick === 'AWAY') {
+                odd = odds.away;
+                pickLabel = `Gana ${away.name}`;
+                probVal = odds.probAway;
+            }
+
+            activeSlip = {
+                matchId,
+                isKnockout,
+                pick,
+                pickLabel,
+                odd,
+                homeName: home.name,
+                awayName: away.name,
+                meta: isKnockout ? match.stageName : `${match.groupName} • Fecha ${match.round || 1}`,
+                probText: odds.isDynamic
+                    ? `Cuota calculada por estadísticas (~${probVal}% prob.)`
+                    : 'Cuota fija inicial x2.00 (primeros partidos)'
+            };
+
+            renderBetSlip();
+            renderMatches();
+
+            // En móvil, hacer scroll suave al boleto
+            if (window.innerWidth < 1024) {
+                document.getElementById('slip-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function clearBetSlip() {
+            activeSlip = null;
+            renderBetSlip();
+            renderMatches();
+        }
+
+        function setQuickStake(amount) {
+            document.getElementById('slip-stake').value = amount;
+            updateSlipCalc();
+        }
+
+        function renderBetSlip() {
+            const empty = document.getElementById('slip-empty');
+            const form = document.getElementById('slip-form');
+            if (!activeSlip) {
+                empty.classList.remove('hidden');
+                form.classList.add('hidden');
+                return;
+            }
+            empty.classList.add('hidden');
+            form.classList.remove('hidden');
+
+            document.getElementById('slip-match-meta').textContent = activeSlip.meta;
+            document.getElementById('slip-match-teams').textContent = `${activeSlip.homeName} vs ${activeSlip.awayName}`;
+            document.getElementById('slip-pick-label').textContent = activeSlip.pickLabel;
+            document.getElementById('slip-odd-display').textContent = activeSlip.odd.toFixed(2);
+            document.getElementById('slip-prob-note').textContent = activeSlip.probText;
+            updateSlipCalc();
+        }
+
+        function updateSlipCalc() {
+            if (!activeSlip) return;
+            const u = currentUser ? usersMap[currentUser] : null;
+            document.getElementById('slip-avail-balance').textContent = formatMoney(u ? u.balance : 0);
+
+            const stake = Math.max(0, Math.round(Number(document.getElementById('slip-stake').value) || 0));
+            const totalPot = Math.round(stake * activeSlip.odd);
+            const counterStake = Math.max(1, totalPot - stake);
+
+            document.getElementById('slip-counter-stake').textContent = formatMoney(counterStake);
+            document.getElementById('slip-total-pot').textContent = formatMoney(stake + counterStake);
+            document.getElementById('slip-net-profit').textContent = '+' + formatMoney(counterStake);
+        }
+
+        async function placeP2PBet() {
+            if (!currentUser || !usersMap[currentUser]) {
+                openAuthModal('login');
+                showToast('Iniciá sesión para publicar una apuesta.');
+                return;
+            }
+            if (!activeSlip) return;
+
+            const user = usersMap[currentUser];
+            const stake = Math.round(Number(document.getElementById('slip-stake').value) || 0);
+            if (stake < 10) {
+                showToast('La apuesta mínima es de $10.');
+                return;
+            }
+            if (stake > user.balance) {
+                showToast('No tenés saldo suficiente.');
+                return;
+            }
+
+            const totalPot = Math.round(stake * activeSlip.odd);
+            const counterStake = Math.max(1, totalPot - stake);
+
+            const bet = {
+                id: uid(),
+                matchId: activeSlip.matchId,
+                isKnockout: activeSlip.isKnockout,
+                matchLabel: `${activeSlip.homeName} vs ${activeSlip.awayName}`,
+                meta: activeSlip.meta,
+                pick: activeSlip.pick,
+                pickLabel: activeSlip.pickLabel,
+                odd: activeSlip.odd,
+                creator: currentUser,
+                creatorStake: stake,
+                taker: null,
+                takerStake: counterStake,
+                status: 'OPEN', // 'OPEN' | 'MATCHED' | 'SETTLED' | 'REFUNDED'
+                winnerUser: null,
+                createdAt: Date.now()
+            };
+
+            if (isDemoMode) {
+                usersMap[currentUser].balance -= stake;
+                betsMap[bet.id] = bet;
+                saveDemoLocal();
+            } else {
+                await firebaseDb.ref('protocasino/users/' + currentUser + '/balance').transaction(b => (b || 0) - stake);
+                await firebaseDb.ref('protocasino/bets/' + bet.id).set(bet);
+            }
+
+            clearBetSlip();
+            renderAll();
+            showToast('¡Apuesta publicada! Esperando que otro usuario la acepte.');
+        }
+
+        async function acceptP2PBet(betId) {
+            if (!currentUser || !usersMap[currentUser]) {
+                openAuthModal('login');
+                showToast('Iniciá sesión para aceptar desafíos.');
+                return;
+            }
+            const bet = betsMap[betId];
+            if (!bet || bet.status !== 'OPEN') {
+                showToast('Esta apuesta ya no está disponible.');
+                return;
+            }
+            if (bet.creator === currentUser) {
+                showToast('No podés aceptar tu propia apuesta.');
+                return;
+            }
+
+            const user = usersMap[currentUser];
+            if (bet.takerStake > user.balance) {
+                showToast(`Necesitás ${formatMoney(bet.takerStake)} para cubrir esta apuesta.`);
+                return;
+            }
+
+            if (isDemoMode) {
+                usersMap[currentUser].balance -= bet.takerStake;
+                betsMap[betId].taker = currentUser;
+                betsMap[betId].status = 'MATCHED';
+                saveDemoLocal();
+                renderAll();
+                showToast(`¡Desafío aceptado contra ${bet.creator}!`);
+                return;
+            }
+
+            // Transacción atómica para evitar que dos usuarios acepten el mismo desafío a la vez
+            const res = await firebaseDb.ref('protocasino/bets/' + betId).transaction(curr => {
+                if (!curr || curr.status !== 'OPEN') return;
+                curr.taker = currentUser;
+                curr.status = 'MATCHED';
+                return curr;
+            });
+
+            if (res.committed) {
+                await firebaseDb.ref('protocasino/users/' + currentUser + '/balance').transaction(b => (b || 0) - bet.takerStake);
+                showToast(`¡Desafío aceptado contra ${bet.creator}!`);
+            } else {
+                showToast('Otro usuario aceptó esa apuesta justo antes.');
+            }
+        }
+
+        async function cancelOpenBet(betId) {
+            const bet = betsMap[betId];
+            if (!bet || bet.status !== 'OPEN' || bet.creator !== currentUser) return;
+
+            if (isDemoMode) {
+                usersMap[currentUser].balance += bet.creatorStake;
+                delete betsMap[betId];
+                saveDemoLocal();
+                renderAll();
+                showToast('Apuesta cancelada y saldo devuelto.');
+                return;
+            }
+
+            const res = await firebaseDb.ref('protocasino/bets/' + betId).transaction(curr => {
+                if (!curr || curr.status !== 'OPEN') return;
+                return null; // Elimina la apuesta abierta
+            });
+            if (res.committed) {
+                await firebaseDb.ref('protocasino/users/' + currentUser + '/balance').transaction(b => (b || 0) + bet.creatorStake);
+                showToast('Apuesta cancelada y saldo devuelto.');
+            }
+        }
+
+        // Liquidación automática cuando un partido se marca como finalizado en index_2.html
+        function checkAndSettleFinishedMatches() {
+            const allMatches = [
+                ...tournamentState.matches.map(m => ({ ...m, _ko: false })),
+                ...tournamentState.knockoutMatches.map(m => ({ ...m, _ko: true }))
+            ];
+            const matchById = {};
+            allMatches.forEach(m => { matchById[m.id] = m; });
+
+            Object.values(betsMap).forEach(bet => {
+                if (!bet || (bet.status !== 'OPEN' && bet.status !== 'MATCHED')) return;
+                const match = matchById[bet.matchId];
+                if (!match || !match.played) return;
+
+                // Si quedó abierta sin nadie que la acepte -> devolver plata al creador
+                if (bet.status === 'OPEN') {
+                    settleRefund(bet);
+                    return;
+                }
+
+                // Determinar resultado real del partido
+                let outcome = 'DRAW';
+                if (match._ko) {
+                    outcome = match.winnerId === match.homeId ? 'HOME' : 'AWAY';
+                } else {
+                    if (match.homeScore > match.awayScore) outcome = 'HOME';
+                    else if (match.awayScore > match.homeScore) outcome = 'AWAY';
+                    else outcome = 'DRAW';
+                }
+
+                const creatorWon = bet.pick === outcome;
+                const winnerUser = creatorWon ? bet.creator : bet.taker;
+                const loserUser = creatorWon ? bet.taker : bet.creator;
+                const payout = bet.creatorStake + bet.takerStake;
+
+                settleMatchedBet(bet, winnerUser, loserUser, payout);
+            });
+        }
+
+        function settleRefund(bet) {
+            if (isDemoMode) {
+                bet.status = 'REFUNDED';
+                if (usersMap[bet.creator]) usersMap[bet.creator].balance += bet.creatorStake;
+                saveDemoLocal();
+                return;
+            }
+            firebaseDb.ref('protocasino/bets/' + bet.id).transaction(curr => {
+                if (!curr || curr.status !== 'OPEN') return;
+                curr.status = 'REFUNDED';
+                return curr;
+            }).then(res => {
+                if (res.committed) {
+                    firebaseDb.ref('protocasino/users/' + bet.creator + '/balance').transaction(b => (b || 0) + bet.creatorStake);
+                }
+            });
+        }
+
+        function settleMatchedBet(bet, winnerUser, loserUser, payout) {
+            if (isDemoMode) {
+                bet.status = 'SETTLED';
+                bet.winnerUser = winnerUser;
+                if (usersMap[winnerUser]) {
+                    usersMap[winnerUser].balance += payout;
+                    usersMap[winnerUser].wins = (usersMap[winnerUser].wins || 0) + 1;
+                }
+                if (usersMap[loserUser]) {
+                    usersMap[loserUser].losses = (usersMap[loserUser].losses || 0) + 1;
+                }
+                saveDemoLocal();
+                return;
+            }
+            firebaseDb.ref('protocasino/bets/' + bet.id).transaction(curr => {
+                if (!curr || curr.status !== 'MATCHED') return;
+                curr.status = 'SETTLED';
+                curr.winnerUser = winnerUser;
+                return curr;
+            }).then(res => {
+                if (res.committed) {
+                    firebaseDb.ref('protocasino/users/' + winnerUser).transaction(u => {
+                        if (!u) return u;
+                        u.balance = (u.balance || 0) + payout;
+                        u.wins = (u.wins || 0) + 1;
+                        return u;
+                    });
+                    firebaseDb.ref('protocasino/users/' + loserUser + '/losses').transaction(l => (l || 0) + 1);
+                }
+            });
+        }
+
+        /* ==========================================================================
+           8. NAVEGACIÓN Y RENDERIZADO DE TODAS LAS VISTAS
+           ========================================================================== */
+        function switchView(viewId) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(viewId).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('is-active'));
+            const activeTab = document.getElementById('tab-' + viewId);
+            if (activeTab) activeTab.classList.add('is-active');
+
+            renderAll();
+        }
+
+        function renderAll() {
+            updateAuthUI();
+            renderSummaryStrip();
+            renderMatches();
+            renderBetSlip();
+            renderOpenMarket();
+            renderMyBets();
+            renderStandings();
+            renderRecords();
+            renderStats();
+            renderKnockout();
+            renderRanking();
+        }
+
+        function setRoundFilter(val) {
+            selectedRoundFilter = val;
+            renderMatches();
+        }
+
+        function setMyBetsFilter(val) {
+            myBetsFilter = val;
+            ['ALL', 'ACTIVE', 'SETTLED'].forEach(f => {
+                const btn = document.getElementById('mybets-f-' + f);
+                if (btn) btn.className = f === val
+                    ? 'px-3 py-1 rounded bg-[#027b5b] text-white font-bold'
+                    : 'px-3 py-1 rounded bg-[#383838] text-neutral-300 font-semibold';
+            });
+            renderMyBets();
+        }
+
+        /* --- Summary Strip --- */
+        function renderSummaryStrip() {
+            const el = document.getElementById('summary-strip');
+            if (!el) return;
+
+            const played = [...tournamentState.matches, ...tournamentState.knockoutMatches].filter(m => m.played);
+            const goals = played.reduce((s, m) => s + (m.homeScore || 0) + (m.awayScore || 0), 0);
+            const avg = played.length ? (goals / played.length).toFixed(1) : '0.0';
+            const remaining = tournamentState.matches.filter(m => !m.played).length;
+
+            const goalsMap = {};
+            played.forEach(m => {
+                Object.entries(m.goals || {}).forEach(([pid, qty]) => {
+                    goalsMap[pid] = (goalsMap[pid] || 0) + qty;
+                });
+            });
+            let top = null;
+            Object.entries(goalsMap).forEach(([pid, qty]) => {
+                if (!top || qty > top.qty) top = { pid, qty };
+            });
+            const topPlayer = top && top.qty > 0 ? getPlayer(top.pid) : null;
+
+            const chip = (label, val, sub) => `
+                <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-3">
+                    <div class="text-[10px] uppercase tracking-wider text-neutral-400 font-semibold">${label}</div>
+                    <div class="font-sport text-2xl font-bold text-[#ffdf1b] leading-tight truncate">${val}</div>
+                    <div class="text-[11px] text-neutral-400 truncate">${sub}</div>
+                </div>
+            `;
+
+            el.innerHTML =
+                chip('Goles Totales', goals, `${played.length} partidos jugados`) +
+                chip('Promedio', avg, 'goles por partido') +
+                chip('Por Jugar', remaining, 'en fase regular') +
+                chip('Goleador', topPlayer ? escHtml(topPlayer.name) : '—', topPlayer ? `${top.qty} goles • ${topPlayer.team.code}` : 'sin goles');
+        }
+
+        /* --- Partidos y Cuotas --- */
+        function renderMatches() {
+            const listEl = document.getElementById('matches-list');
+            const barEl = document.getElementById('rounds-filter-bar');
+            const badge = document.getElementById('matches-progress-badge');
+
+            const playedCount = tournamentState.matches.filter(m => m.played).length;
+            if (badge) badge.textContent = `${playedCount} / ${tournamentState.matches.length} Jugados`;
+
+            if (tournamentState.matches.length === 0) {
+                if (barEl) barEl.innerHTML = '';
+                listEl.innerHTML = `
+                    <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-8 text-center text-neutral-400 text-sm">
+                        Todavía no hay partidos sorteados en el torneo. Apenas inicies el torneo en la otra página, aparecerán acá al instante.
+                    </div>
+                `;
+                return;
+            }
+
+            // Filtro de fechas
+            const rounds = Array.from(new Set(tournamentState.matches.map(m => m.round || 1))).sort((a, b) => a - b);
+            if (selectedRoundFilter !== 'ALL' && !rounds.includes(selectedRoundFilter)) selectedRoundFilter = 'ALL';
+
+            barEl.innerHTML = `
+                <button onclick="setRoundFilter('ALL')" class="shrink-0 text-xs px-3 py-1 rounded font-bold transition ${selectedRoundFilter === 'ALL' ? 'bg-[#027b5b] text-white' : 'bg-[#383838] text-neutral-300 hover:bg-[#444]'}">
+                    Todas
+                </button>
+            ` + rounds.map(r => `
+                <button onclick="setRoundFilter(${r})" class="shrink-0 text-xs px-3 py-1 rounded font-bold transition ${selectedRoundFilter === r ? 'bg-[#ffdf1b] text-[#111]' : 'bg-[#383838] text-neutral-300 hover:bg-[#444]'}">
+                    Fecha ${r}
+                </button>
+            `).join('');
+
+            const statsMap = getAllTeamsStatsMap();
+            const openBets = Object.values(betsMap).filter(b => b.status === 'OPEN');
+
+            const filtered = selectedRoundFilter === 'ALL'
+                ? tournamentState.matches
+                : tournamentState.matches.filter(m => (m.round || 1) === selectedRoundFilter);
+
+            // Agrupar por fecha
+            const shownRounds = Array.from(new Set(filtered.map(m => m.round || 1))).sort((a, b) => a - b);
+
+            listEl.innerHTML = shownRounds.map(r => {
+                const rMatches = filtered.filter(m => (m.round || 1) === r);
+                return `
+                    <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg overflow-hidden">
+                        <div class="bg-[#333] px-4 py-2 border-b border-[#444] flex items-center justify-between">
+                            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Fecha ${r}</span>
+                            <div class="hidden sm:grid grid-cols-3 gap-2 w-60 text-center text-[10px] font-bold uppercase text-neutral-400">
+                                <span>1 (Local)</span>
+                                <span>X (Empate)</span>
+                                <span>2 (Visit.)</span>
+                            </div>
+                        </div>
+                        <div class="divide-y divide-[#383838]">
+                            ${rMatches.map(m => renderBet365MatchRow(m, false, statsMap, openBets)).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderBet365MatchRow(m, isKnockout, statsMap, openBets) {
+            const home = getTeam(m.homeId);
+            const away = getTeam(m.awayId);
+            if (!home || !away) return '';
+
+            const odds = computeMatchOdds(m, isKnockout);
+            const hPos = statsMap[home.id]?.pos;
+            const aPos = statsMap[away.id]?.pos;
+            const matchOpenBets = openBets.filter(b => b.matchId === m.id);
+            const mvp = m.mvpId ? getPlayer(m.mvpId) : null;
+
+            const isSel = (pick) => activeSlip && activeSlip.matchId === m.id && activeSlip.pick === pick ? 'is-active' : '';
+
+            return `
+                <div class="p-3.5 hover:bg-[#2e2e2e] transition space-y-2.5">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <!-- Equipos -->
+                        <div class="flex-1 min-w-0 space-y-1.5">
+                            <div class="flex items-center space-x-2 text-[10px] text-neutral-400">
+                                <span class="uppercase font-semibold">${escHtml(isKnockout ? m.stageName : m.groupName)}</span>
+                                ${m.played
+                                    ? `<span class="bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.2 rounded">FINALIZADO</span>`
+                                    : `<span class="bg-amber-500/15 text-[#ffdf1b] font-bold px-1.5 py-0.2 rounded">${odds.isDynamic ? 'CUOTA DINÁMICA' : 'CUOTA x2'}</span>`
+                                }
+                                ${!m.played && matchOpenBets.length > 0
+                                    ? `<button onclick="switchView('view-market')" class="bg-[#027b5b] text-white font-bold px-1.5 py-0.2 rounded hover:bg-emerald-600">${matchOpenBets.length} desafío${matchOpenBets.length > 1 ? 's' : ''}</button>`
+                                    : ''
+                                }
+                            </div>
+
+                            <!-- Local -->
+                            <div class="flex items-center justify-between pr-2">
+                                <div class="flex items-center space-x-2 min-w-0">
+                                    ${flagMarkup(home)}
+                                    <span class="text-sm font-bold text-white truncate">${escHtml(home.name)}</span>
+                                    ${hPos ? `<span class="text-[10px] text-neutral-400 font-semibold">${hPos}°</span>` : ''}
+                                </div>
+                                ${m.played ? `<span class="font-sport text-xl font-bold ${m.homeScore > m.awayScore ? 'text-[#ffdf1b]' : 'text-neutral-300'}">${m.homeScore}</span>` : ''}
+                            </div>
+
+                            <!-- Visitante -->
+                            <div class="flex items-center justify-between pr-2">
+                                <div class="flex items-center space-x-2 min-w-0">
+                                    ${flagMarkup(away)}
+                                    <span class="text-sm font-bold text-white truncate">${escHtml(away.name)}</span>
+                                    ${aPos ? `<span class="text-[10px] text-neutral-400 font-semibold">${aPos}°</span>` : ''}
+                                </div>
+                                ${m.played ? `<span class="font-sport text-xl font-bold ${m.awayScore > m.homeScore ? 'text-[#ffdf1b]' : 'text-neutral-300'}">${m.awayScore}</span>` : ''}
+                            </div>
+                        </div>
+
+                        <!-- Botones de Cuotas (1 - X - 2) -->
+                        ${!m.played ? `
+                            <div class="grid ${isKnockout ? 'grid-cols-2' : 'grid-cols-3'} gap-2 sm:w-60 shrink-0">
+                                <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'HOME')" class="odd-btn ${isSel('HOME')} rounded py-2 px-2 flex flex-col items-center justify-center">
+                                    <span class="text-[10px] opacity-75 font-semibold">${escHtml(home.code)}</span>
+                                    <span class="odd-val text-sm">${odds.home.toFixed(2)}</span>
+                                </button>
+                                ${!isKnockout ? `
+                                    <button onclick="selectBetOutcome('${m.id}', false, 'DRAW')" class="odd-btn ${isSel('DRAW')} rounded py-2 px-2 flex flex-col items-center justify-center">
+                                        <span class="text-[10px] opacity-75 font-semibold">EMP</span>
+                                        <span class="odd-val text-sm">${odds.draw.toFixed(2)}</span>
+                                    </button>
+                                ` : ''}
+                                <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'AWAY')" class="odd-btn ${isSel('AWAY')} rounded py-2 px-2 flex flex-col items-center justify-center">
+                                    <span class="text-[10px] opacity-75 font-semibold">${escHtml(away.code)}</span>
+                                    <span class="odd-val text-sm">${odds.away.toFixed(2)}</span>
+                                </button>
+                            </div>
+                        ` : `
+                            <div class="sm:w-60 shrink-0 text-right text-[11px] text-neutral-400 space-y-1">
+                                ${mvp ? `<div class="inline-block bg-[#1e1e1e] border border-[#444] text-[#ffdf1b] px-2 py-0.5 rounded font-semibold">MVP: ${escHtml(mvp.name)}</div>` : ''}
+                                <div>Apuestas liquidadas</div>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+        }
+
+        /* --- Mercado de Desafíos Abiertos --- */
+        function renderOpenMarket() {
+            const openBets = Object.values(betsMap)
+                .filter(b => b.status === 'OPEN')
+                .sort((a, b) => b.createdAt - a.createdAt);
+
+            document.getElementById('open-bets-badge').textContent = openBets.length;
+
+            // Mini lista lateral
+            const mini = document.getElementById('mini-open-bets');
+            if (openBets.length === 0) {
+                mini.innerHTML = `<div class="text-neutral-400 text-center py-3">No hay desafíos esperando rival.</div>`;
+            } else {
+                mini.innerHTML = openBets.slice(0, 4).map(b => `
+                    <div class="bg-[#1f1f1f] border border-[#3a3a3a] rounded p-2.5 space-y-1.5">
+                        <div class="flex justify-between text-[11px]">
+                            <span class="font-bold text-white">${escHtml(b.creator)}</span>
+                            <span class="text-[#ffdf1b] font-bold">x${b.odd.toFixed(2)}</span>
+                        </div>
+                        <div class="text-[11px] text-neutral-300 truncate">${escHtml(b.matchLabel)} — <strong>${escHtml(b.pickLabel)}</strong></div>
+                        <div class="flex items-center justify-between pt-1">
+                            <span class="text-[10px] text-neutral-400">Cubrís ${formatMoney(b.takerStake)} → Ganás ${formatMoney(b.creatorStake + b.takerStake)}</span>
+                            ${b.creator === currentUser
+                                ? `<button onclick="cancelOpenBet('${b.id}')" class="text-[10px] text-rose-400 hover:underline font-bold">Cancelar</button>`
+                                : `<button onclick="acceptP2PBet('${b.id}')" class="bg-[#027b5b] hover:bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-1 rounded">Aceptar</button>`
+                            }
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // Vista completa del mercado
+            const container = document.getElementById('market-bets-list');
+            if (openBets.length === 0) {
+                container.innerHTML = `
+                    <div class="md:col-span-2 bg-[#282828] border border-[#3a3a3a] rounded-lg p-10 text-center text-neutral-400 text-sm">
+                        No hay desafíos abiertos en este momento. Publicá una apuesta desde "Partidos y Apuestas" para desafiar a tus amigos.
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = openBets.map(b => {
+                const pot = b.creatorStake + b.takerStake;
+                const isMine = b.creator === currentUser;
+                return `
+                    <div class="bg-[#282828] border border-[#3d3d3d] rounded-lg p-4 flex flex-col justify-between space-y-3">
+                        <div class="space-y-1">
+                            <div class="flex items-center justify-between text-[11px]">
+                                <span class="text-emerald-400 font-bold uppercase">${escHtml(b.meta)}</span>
+                                <span class="bg-[#1e1e1e] text-[#ffdf1b] font-bold px-2 py-0.5 rounded border border-[#444]">Cuota ${b.odd.toFixed(2)}</span>
+                            </div>
+                            <div class="text-sm font-bold text-white">${escHtml(b.matchLabel)}</div>
+                            <div class="text-xs text-neutral-300">
+                                <strong class="text-white">${escHtml(b.creator)}</strong> apostó <strong class="text-[#ffdf1b]">${formatMoney(b.creatorStake)}</strong> a: <span class="underline">${escHtml(b.pickLabel)}</span>
+                            </div>
+                        </div>
+
+                        <div class="bg-[#1e1e1e] rounded p-3 flex items-center justify-between text-xs border border-[#383838]">
+                            <div>
+                                <div class="text-neutral-400">Para tomar el lado contrario ponés:</div>
+                                <div class="text-sm font-extrabold text-white">${formatMoney(b.takerStake)} <span class="text-emerald-400 font-bold">(Te llevás ${formatMoney(pot)})</span></div>
+                            </div>
+                            ${isMine
+                                ? `<button onclick="cancelOpenBet('${b.id}')" class="bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 border border-rose-500/40 px-3 py-2 rounded font-bold text-xs">Cancelar</button>`
+                                : `<button onclick="acceptP2PBet('${b.id}')" class="bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] px-4 py-2 rounded font-extrabold text-xs shadow">Aceptar Desafío</button>`
+                            }
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /* --- Mis Apuestas --- */
+        function renderMyBets() {
+            const container = document.getElementById('mybets-list');
+            if (!currentUser) {
+                container.innerHTML = `
+                    <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-8 text-center space-y-3">
+                        <div class="text-sm text-neutral-300">Iniciá sesión para ver tu historial de apuestas.</div>
+                        <button onclick="openAuthModal('login')" class="bg-[#ffdf1b] text-[#111] font-bold text-xs px-4 py-2 rounded">Iniciar Sesión</button>
+                    </div>
+                `;
+                return;
+            }
+
+            let mine = Object.values(betsMap)
+                .filter(b => b.creator === currentUser || b.taker === currentUser)
+                .sort((a, b) => b.createdAt - a.createdAt);
+
+            if (myBetsFilter === 'ACTIVE') mine = mine.filter(b => b.status === 'OPEN' || b.status === 'MATCHED');
+            if (myBetsFilter === 'SETTLED') mine = mine.filter(b => b.status === 'SETTLED' || b.status === 'REFUNDED');
+
+            if (mine.length === 0) {
+                container.innerHTML = `<div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-8 text-center text-neutral-400 text-sm">Todavía no tenés apuestas en esta categoría.</div>`;
+                return;
+            }
+
+            container.innerHTML = mine.map(b => {
+                const isCreator = b.creator === currentUser;
+                const myStake = isCreator ? b.creatorStake : b.takerStake;
+                const pot = b.creatorStake + b.takerStake;
+                const rival = isCreator ? (b.taker || 'Esperando rival...') : b.creator;
+
+                let statusBadge = `<span class="bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-bold">ABIERTA</span>`;
+                if (b.status === 'MATCHED') statusBadge = `<span class="bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded font-bold">EN JUEGO vs ${escHtml(rival)}</span>`;
+                if (b.status === 'REFUNDED') statusBadge = `<span class="bg-neutral-600/40 text-neutral-300 px-2 py-0.5 rounded font-bold">DEVUELTA</span>`;
+                if (b.status === 'SETTLED') {
+                    const won = b.winnerUser === currentUser;
+                    statusBadge = won
+                        ? `<span class="bg-emerald-500/25 text-emerald-300 px-2 py-0.5 rounded font-bold">GANADA (+${formatMoney(pot - myStake)})</span>`
+                        : `<span class="bg-rose-500/25 text-rose-300 px-2 py-0.5 rounded font-bold">PERDIDA (-${formatMoney(myStake)})</span>`;
+                }
+
+                return `
+                    <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="space-y-1">
+                            <div class="flex items-center space-x-2 text-[11px]">
+                                <span class="text-neutral-400 font-semibold">${escHtml(b.meta)}</span>
+                                ${statusBadge}
+                            </div>
+                            <div class="text-sm font-bold text-white">${escHtml(b.matchLabel)}</div>
+                            <div class="text-xs text-neutral-300">
+                                Tu posición: <strong class="text-[#ffdf1b]">${isCreator ? escHtml(b.pickLabel) : 'En contra de ' + escHtml(b.pickLabel)}</strong>
+                                <span class="text-neutral-400"> • Rival: ${escHtml(rival)}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between sm:justify-end sm:space-x-5 text-xs">
+                            <div class="text-right">
+                                <div class="text-neutral-400">Apostaste: <strong class="text-white">${formatMoney(myStake)}</strong></div>
+                                <div class="text-neutral-400">Pozo total: <strong class="text-emerald-400">${formatMoney(pot)}</strong></div>
+                            </div>
+                            ${b.status === 'OPEN' && isCreator
+                                ? `<button onclick="cancelOpenBet('${b.id}')" class="bg-rose-600/20 text-rose-300 border border-rose-500/40 px-3 py-1.5 rounded font-bold">Cancelar</button>`
+                                : ''
+                            }
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /* --- Tabla de Posiciones --- */
+        function renderStandings() {
+            const container = document.getElementById('standings-container');
+            const cutoff = tournamentState.format === 'LEAGUE' ? tournamentState.leagueQualifiers : tournamentState.cupQualifiersPerGroup;
+            document.getElementById('qualification-legend').textContent =
+                cutoff > 0 ? `Clasifican los primeros ${cutoff}` : 'El 1° de la tabla es Campeón';
+
+            if (!tournamentState.groups.length) {
+                container.innerHTML = `<div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-8 text-center text-neutral-400 text-sm">Sin grupos sorteados todavía.</div>`;
+                return;
+            }
+
+            const formDots = (form) => {
+                if (!form || !form.length) return '<span class="text-neutral-500">—</span>';
+                const c = { V: '#00e676', E: '#a3a3a3', D: '#ef4444' };
+                return form.slice(-5).map(r => `<span class="form-dot" style="background:${c[r]}" title="${r}"></span>`).join('');
+            };
+
+            container.innerHTML = tournamentState.groups.map(group => {
+                const rows = calculateGroupStandings(group);
+                return `
+                    <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg overflow-hidden">
+                        <div class="bg-[#027b5b] px-4 py-2.5 flex justify-between items-center">
+                            <h3 class="text-sm font-bold text-white uppercase tracking-wider">${escHtml(group.name)}</h3>
+                            <span class="text-[11px] text-[#ffdf1b] font-semibold">${cutoff > 0 ? `Top ${cutoff} clasifican` : 'Liga directa'}</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                                <thead>
+                                    <tr class="bg-[#222] text-neutral-400 uppercase text-[11px] border-b border-[#3a3a3a]">
+                                        <th class="py-2.5 px-3 text-center w-10">Pos</th>
+                                        <th class="py-2.5 px-3">Selección</th>
+                                        <th class="py-2.5 px-2 text-center">PJ</th>
+                                        <th class="py-2.5 px-2 text-center">G</th>
+                                        <th class="py-2.5 px-2 text-center">E</th>
+                                        <th class="py-2.5 px-2 text-center">P</th>
+                                        <th class="py-2.5 px-2 text-center">GF</th>
+                                        <th class="py-2.5 px-2 text-center">GC</th>
+                                        <th class="py-2.5 px-2 text-center">DG</th>
+                                        <th class="py-2.5 px-2 text-center">Forma</th>
+                                        <th class="py-2.5 px-3 text-center bg-[#1c1c1c] text-[#ffdf1b]">PTS</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-[#333]">
+                                    ${rows.map((r, idx) => {
+                                        const pos = idx + 1;
+                                        const qual = cutoff > 0 ? pos <= cutoff : pos === 1;
+                                        return `
+                                            <tr class="${qual ? 'bg-[#027b5b]/10' : ''} hover:bg-[#323232]">
+                                                <td class="py-2.5 px-3 text-center font-bold">
+                                                    <span class="inline-flex w-5 h-5 items-center justify-center rounded text-xs ${qual ? 'bg-[#027b5b] text-white' : 'bg-[#3a3a3a] text-neutral-300'}">${pos}</span>
+                                                </td>
+                                                <td class="py-2.5 px-3">
+                                                    <div class="flex items-center space-x-2">
+                                                        ${flagMarkup(r.team)}
+                                                        <div>
+                                                            <div class="font-bold text-white leading-tight">${escHtml(r.team.name)}</div>
+                                                            <div class="text-[10px] text-neutral-400">${(r.team.players || []).map(p => escHtml(p.name)).join(', ')}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="py-2.5 px-2 text-center font-semibold">${r.pj}</td>
+                                                <td class="py-2.5 px-2 text-center text-emerald-400 font-semibold">${r.pg}</td>
+                                                <td class="py-2.5 px-2 text-center text-neutral-400">${r.pe}</td>
+                                                <td class="py-2.5 px-2 text-center text-rose-400">${r.pp}</td>
+                                                <td class="py-2.5 px-2 text-center text-neutral-300">${r.gf}</td>
+                                                <td class="py-2.5 px-2 text-center text-neutral-300">${r.gc}</td>
+                                                <td class="py-2.5 px-2 text-center font-semibold ${r.dg > 0 ? 'text-emerald-400' : r.dg < 0 ? 'text-rose-400' : 'text-neutral-400'}">${r.dg > 0 ? '+' + r.dg : r.dg}</td>
+                                                <td class="py-2.5 px-2 text-center whitespace-nowrap">${formDots(r.form)}</td>
+                                                <td class="py-2.5 px-3 text-center font-extrabold text-[#ffdf1b] bg-[#1c1c1c]">${r.pts}</td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /* --- Récords y Goleadores / MVP --- */
+        function renderRecords() {
+            const el = document.getElementById('records-container');
+            if (!el) return;
+            const rows = tournamentState.groups.flatMap(g => calculateGroupStandings(g)).filter(r => r.pj > 0);
+            const played = [...tournamentState.matches, ...tournamentState.knockoutMatches].filter(m => m.played);
+
+            let attack = null, defense = null, bigWin = null, mostGoals = null;
+            rows.forEach(r => {
+                if (!attack || r.gf > attack.gf) attack = r;
+                if (!defense || (r.gc / r.pj) < (defense.gc / defense.pj)) defense = r;
+            });
+            played.forEach(m => {
+                const diff = Math.abs(m.homeScore - m.awayScore);
+                const total = m.homeScore + m.awayScore;
+                if (!bigWin || diff > bigWin.diff) bigWin = { m, diff };
+                if (!mostGoals || total > mostGoals.total) mostGoals = { m, total };
+            });
+
+            const mLbl = (m) => {
+                const h = getTeam(m.homeId), a = getTeam(m.awayId);
+                return h && a ? `${h.code} ${m.homeScore}-${m.awayScore} ${a.code}` : '—';
+            };
+            const card = (lbl, val, sub) => `
+                <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-3.5">
+                    <div class="text-[10px] uppercase tracking-wider text-neutral-400 font-semibold">${lbl}</div>
+                    <div class="font-sport text-2xl font-bold text-white truncate">${val}</div>
+                    <div class="text-[11px] text-emerald-400 truncate">${sub}</div>
+                </div>
+            `;
+
+            el.innerHTML =
+                card('Mejor Ataque', attack ? escHtml(attack.team.name) : '—', attack ? `${attack.gf} goles a favor` : 'sin datos') +
+                card('Mejor Defensa', defense ? escHtml(defense.team.name) : '—', defense ? `${defense.gc} en contra (${defense.pj} PJ)` : 'sin datos') +
+                card('Mayor Goleada', bigWin && bigWin.diff > 0 ? mLbl(bigWin.m) : '—', bigWin && bigWin.diff > 0 ? `diferencia de ${bigWin.diff}` : 'sin datos') +
+                card('Más Goles en Partido', mostGoals && mostGoals.total > 0 ? mLbl(mostGoals.m) : '—', mostGoals && mostGoals.total > 0 ? `${mostGoals.total} goles` : 'sin datos');
+        }
+
+        function renderStats() {
+            const goalsMap = {}, mvpMap = {};
+            tournamentState.teams.forEach(t => (t.players || []).forEach(p => { goalsMap[p.id] = 0; mvpMap[p.id] = 0; }));
+            const allPlayed = [...tournamentState.matches, ...tournamentState.knockoutMatches].filter(m => m.played);
+
+            allPlayed.forEach(m => {
+                Object.entries(m.goals || {}).forEach(([pid, qty]) => { if (goalsMap[pid] !== undefined) goalsMap[pid] += qty; });
+                if (m.mvpId && mvpMap[m.mvpId] !== undefined) mvpMap[m.mvpId] += 1;
+            });
+
+            const scorers = Object.entries(goalsMap).map(([pid, goals]) => ({ ...getPlayer(pid), goals })).filter(x => x.goals > 0).sort((a, b) => b.goals - a.goals);
+            const mvps = Object.entries(mvpMap).map(([pid, count]) => ({ ...getPlayer(pid), count })).filter(x => x.count > 0).sort((a, b) => b.count - a.count);
+
+            document.getElementById('scorers-tbody').innerHTML = scorers.length
+                ? scorers.map((s, i) => `
+                    <tr class="hover:bg-[#323232]">
+                        <td class="py-2.5 px-4 text-center text-neutral-400 font-bold">${i + 1}</td>
+                        <td class="py-2.5 px-4 font-bold text-white">${escHtml(s.name)}</td>
+                        <td class="py-2.5 px-4"><span class="inline-flex items-center space-x-2">${flagMarkup(s.team)}<span class="text-neutral-300">${escHtml(s.team.name)}</span></span></td>
+                        <td class="py-2.5 px-4 text-center font-sport text-xl font-bold text-[#ffdf1b]">${s.goals}</td>
+                    </tr>
+                `).join('')
+                : `<tr><td colspan="4" class="py-6 text-center text-neutral-400 text-xs">Sin goles registrados todavía.</td></tr>`;
+
+            document.getElementById('mvp-tbody').innerHTML = mvps.length
+                ? mvps.map(m => `
+                    <tr class="hover:bg-[#323232]">
+                        <td class="py-2.5 px-4">
+                            <div class="font-bold text-white">${escHtml(m.name)}</div>
+                            <div class="text-[11px] text-neutral-400">${escHtml(m.team.name)} (${escHtml(m.team.code)})</div>
+                        </td>
+                        <td class="py-2.5 px-4 text-center"><span class="bg-[#ffdf1b]/20 text-[#ffdf1b] font-bold px-2.5 py-0.5 rounded-full text-xs">${m.count}</span></td>
+                    </tr>
+                `).join('')
+                : `<tr><td colspan="2" class="py-6 text-center text-neutral-400 text-xs">Sin MVPs elegidos todavía.</td></tr>`;
+        }
+
+        /* --- Fase Final --- */
+        function renderKnockout() {
+            const container = document.getElementById('knockout-container');
+            const banner = document.getElementById('champion-banner');
+            banner.classList.add('hidden');
+
+            if (!tournamentState.knockoutMatches.length) {
+                container.innerHTML = `<div class="md:col-span-3 bg-[#282828] border border-[#3a3a3a] rounded-lg p-8 text-center text-neutral-400 text-sm">Las llaves de Fase Final todavía no fueron generadas en el torneo.</div>`;
+                return;
+            }
+
+            const finalMatch = tournamentState.knockoutMatches.find(m => m.stage === 'F');
+            if (finalMatch && finalMatch.played && finalMatch.winnerId) {
+                const champ = getTeam(finalMatch.winnerId);
+                if (champ) {
+                    banner.classList.remove('hidden');
+                    document.getElementById('champion-name').textContent = champ.name;
+                    document.getElementById('champion-players').textContent = (champ.players || []).map(p => p.name).join(' • ');
+                }
+            }
+
+            const statsMap = getAllTeamsStatsMap();
+            const openBets = Object.values(betsMap).filter(b => b.status === 'OPEN');
+
+            const stages = [
+                { title: 'Cuartos de Final', matches: tournamentState.knockoutMatches.filter(m => m.stage === 'QF') },
+                { title: 'Semifinales', matches: tournamentState.knockoutMatches.filter(m => m.stage === 'SF') },
+                { title: 'Gran Final', matches: tournamentState.knockoutMatches.filter(m => m.stage === 'F') }
+            ].filter(s => s.matches.length > 0);
+
+            container.className = `grid grid-cols-1 md:grid-cols-${stages.length} gap-5 items-start`;
+            container.innerHTML = stages.map(st => `
+                <div class="space-y-3">
+                    <div class="bg-[#027b5b] text-white text-xs font-bold uppercase tracking-wider text-center py-2 rounded">${st.title}</div>
+                    ${st.matches.map(m => {
+                        const home = getTeam(m.homeId), away = getTeam(m.awayId);
+                        if (!home || !away) {
+                            return `<div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-4 text-center text-xs text-neutral-500">${escHtml(m.stageName)} — Esperando rivales...</div>`;
+                        }
+                        return `<div class="bg-[#282828] border border-[#3a3a3a] rounded-lg overflow-hidden">${renderBet365MatchRow(m, true, statsMap, openBets)}</div>`;
+                    }).join('')}
+                </div>
+            `).join('');
+        }
+
+        /* --- Ranking de Usuarios --- */
+        function renderRanking() {
+            const tbody = document.getElementById('ranking-tbody');
+            const list = Object.values(usersMap).sort((a, b) => (b.balance || 0) - (a.balance || 0));
+
+            if (!list.length) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-8 text-center text-neutral-400 text-xs">Todavía no hay usuarios registrados.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = list.map((u, idx) => `
+                <tr class="${u.username === currentUser ? 'bg-[#027b5b]/15' : ''} hover:bg-[#323232]">
+                    <td class="py-3 px-4 text-center font-bold text-neutral-400">${idx + 1}</td>
+                    <td class="py-3 px-4 font-bold text-white">
+                        ${escHtml(u.username)}
+                        ${u.username === currentUser ? '<span class="ml-1.5 text-[10px] bg-[#027b5b] text-white px-1.5 py-0.5 rounded">TÚ</span>' : ''}
+                    </td>
+                    <td class="py-3 px-4 text-center text-emerald-400 font-semibold">${u.wins || 0}</td>
+                    <td class="py-3 px-4 text-center text-rose-400 font-semibold">${u.losses || 0}</td>
+                    <td class="py-3 px-4 text-right font-extrabold text-[#ffdf1b]">${formatMoney(u.balance)}</td>
+                </tr>
+            `).join('');
+        }
+
+        window.onload = initApp;
+    </script>
+</body>
+</html>
