@@ -1101,18 +1101,25 @@
 
         /**
          * Calcula cuotas P2P justas (sin margen de la casa):
-         * - Si alguno de los equipos jugó menos de 2 partidos -> cuota fija 2.00 (primeros partidos)
-         * - Si ya hay datos (>= 2 PJ ambos) -> calcula probabilidades según puntos/partido, DG y racha
+         * - Usa historial desde el 1° partido jugado (si uno ganó 2 y otro perdió 2, ya ajusta fuerte)
+         * - Incorpora el marcador parcial en vivo (ej. si van 2-0, ajusta cuotas de 1X2 y Doble Op.)
          */
         function computeMatchOdds(match, isKnockout) {
             const statsMap = getAllTeamsStatsMap();
             const h = statsMap[match.homeId];
             const a = statsMap[match.awayId];
 
-            // Primeros partidos: pago x2.00 siempre
-            if (!h || !a || h.pj < 2 || a.pj < 2) {
+            const liveHome = Number(match.homeScore) || 0;
+            const liveAway = Number(match.awayScore) || 0;
+            const liveGoalsTotal = liveHome + liveAway;
+            const isLive = !match.played && (liveGoalsTotal > 0 || typeof match.liveSecondsLeft === 'number');
+            const hasHistory = (h && h.pj >= 1) || (a && a.pj >= 1);
+
+            // Solo si ambos tienen 0 partidos jugados y el partido va 0-0 sin empezar, pago x2.00
+            if (!hasHistory && !isLive) {
                 return {
                     isDynamic: false,
+                    isLive: false,
                     home: 2.00,
                     draw: isKnockout ? null : 2.00,
                     away: 2.00,
@@ -1123,69 +1130,91 @@
             }
 
             const teamPower = (s) => {
+                if (!s || s.pj === 0) return 50;
                 const ppg = s.pts / s.pj; // 0..3
-                const gdpg = Math.max(-3, Math.min(3, s.dg / s.pj));
+                const gdpg = Math.max(-3.5, Math.min(3.5, s.dg / s.pj));
                 const recent = (s.form || []).slice(-3);
                 const formAvg = recent.length
                     ? recent.reduce((acc, r) => acc + (r === 'V' ? 1 : r === 'E' ? 0.5 : 0), 0) / recent.length
                     : 0.5;
-                return 50 + (ppg * 12) + (gdpg * 6) + (formAvg * 10);
+                // Peso extra a racha de victorias/derrotas seguidas (ej: 2 ganados vs 2 perdidos)
+                const streakBonus = (s.pg - s.pp) * 6.5;
+                return 50 + (ppg * 11) + (gdpg * 6.5) + ((formAvg - 0.5) * 18) + streakBonus;
             };
 
-            const diff = teamPower(h) - teamPower(a);
-            const homeShare = 1 / (1 + Math.exp(-diff / 18));
+            let diff = teamPower(h) - teamPower(a);
+
+            // Ajuste fuerte por marcador parcial en vivo (cada gol de ventaja inclina fuertemente la probabilidad)
+            const goalDiffLive = liveHome - liveAway;
+            const secsLeft = typeof match.liveSecondsLeft === 'number' ? match.liveSecondsLeft : 600;
+            const timeProgress = 1 + Math.max(0, Math.min(1, (600 - secsLeft) / 600)) * 0.7;
+            diff += goalDiffLive * 24 * timeProgress;
+
+            const homeShare = 1 / (1 + Math.exp(-diff / 17));
 
             if (isKnockout) {
-                const pHome = Math.max(0.15, Math.min(0.85, homeShare));
+                const pHome = Math.max(0.12, Math.min(0.88, homeShare));
                 const pAway = 1 - pHome;
                 return {
                     isDynamic: true,
-                    home: clampOdd(1 / pHome, 1.20, 5.50),
+                    isLive,
+                    home: clampOdd(1 / pHome, 1.14, 7.50),
                     draw: null,
-                    away: clampOdd(1 / pAway, 1.20, 5.50),
+                    away: clampOdd(1 / pAway, 1.14, 7.50),
                     probHome: Math.round(pHome * 100),
                     probDraw: 0,
                     probAway: Math.round(pAway * 100)
                 };
             }
 
-            // En fase regular existe el empate
-            const pDraw = Math.max(0.14, 0.24 - Math.abs(diff) * 0.0022);
+            // En fase regular existe el empate (baja mucho si ya hay 2+ goles de diferencia en vivo)
+            const baseDraw = goalDiffLive === 0 ? (isLive ? 0.28 : 0.24) : Math.max(0.08, 0.22 - Math.abs(goalDiffLive) * 0.065);
+            const pDraw = Math.max(0.08, baseDraw - Math.abs(diff) * 0.0014);
             const pHome = (1 - pDraw) * homeShare;
             const pAway = (1 - pDraw) * (1 - homeShare);
 
             return {
                 isDynamic: true,
-                home: clampOdd(1 / pHome, 1.25, 6.00),
-                draw: clampOdd(1 / pDraw, 2.20, 5.00),
-                away: clampOdd(1 / pAway, 1.25, 6.00),
+                isLive,
+                home: clampOdd(1 / pHome, 1.15, 7.50),
+                draw: clampOdd(1 / pDraw, 1.90, 6.50),
+                away: clampOdd(1 / pAway, 1.15, 7.50),
                 probHome: Math.round(pHome * 100),
                 probDraw: Math.round(pDraw * 100),
                 probAway: Math.round(pAway * 100)
             };
         }
 
-        // Cuotas de Total de Goles (Over/Under) y Goles por Jugador en un partido
+        // Cuotas de Total de Goles (Over/Under) y Goles por Jugador en un partido (incluye estado en vivo)
         function computeMatchPropOdds(match) {
             const statsMap = getAllTeamsStatsMap();
             const pMap = getPlayerStatsMap();
             const h = statsMap[match.homeId];
             const a = statsMap[match.awayId];
 
-            const hasEnoughData = h && a && h.pj >= 2 && a.pj >= 2;
+            const liveGoalsNow = (Number(match.homeScore) || 0) + (Number(match.awayScore) || 0);
+            const secsLeft = typeof match.liveSecondsLeft === 'number' ? match.liveSecondsLeft : 600;
+            const remainingFraction = Math.max(0.15, Math.min(1, secsLeft / 600));
+            const hasHistory = (h && h.pj >= 1) || (a && a.pj >= 1);
+            const isLive = !match.played && (liveGoalsNow > 0 || typeof match.liveSecondsLeft === 'number');
 
-            // Goles esperados del partido (en 3v3 suelen hacerse ~3.5 goles por partido)
-            let expectedGoals = 3.5;
-            if (hasEnoughData) {
-                const hFor = h.gf / h.pj;
-                const hAg = h.gc / h.pj;
-                const aFor = a.gf / a.pj;
-                const aAg = a.gc / a.pj;
-                expectedGoals = Math.max(1.5, Math.min(8.0, ((hFor + aAg) / 2) + ((aFor + hAg) / 2)));
+            // Goles esperados para todo el partido (~3.5 en 3v3)
+            let fullMatchExpected = 3.5;
+            if (hasHistory) {
+                const hFor = h && h.pj > 0 ? h.gf / h.pj : 1.75;
+                const hAg = h && h.pj > 0 ? h.gc / h.pj : 1.75;
+                const aFor = a && a.pj > 0 ? a.gf / a.pj : 1.75;
+                const aAg = a && a.pj > 0 ? a.gc / a.pj : 1.75;
+                fullMatchExpected = Math.max(1.5, Math.min(8.0, ((hFor + aAg) / 2) + ((aFor + hAg) / 2)));
             }
 
-            // Distribución de Poisson para calcular probabilidad de superar N goles
+            // Goles esperados restantes a partir del marcador actual
+            const remainingExpected = fullMatchExpected * remainingFraction;
+            const totalExpected = liveGoalsNow + remainingExpected;
+
+            // Distribución de Poisson para calcular probabilidad de superar N goles restantes
             const poissonCdf = (lambda, k) => {
+                if (k < 0) return 0;
                 let sum = 0, term = Math.exp(-lambda);
                 for (let i = 0; i <= k; i++) {
                     if (i > 0) term *= lambda / i;
@@ -1195,17 +1224,22 @@
             };
 
             const lines = [2.5, 3.5, 4.5].map(line => {
-                if (!hasEnoughData) {
-                    return { line, overOdd: 2.00, underOdd: 2.00, probOver: 50 };
+                if (!hasHistory && !isLive) {
+                    return { line, overOdd: 2.00, underOdd: 2.00, probOver: 50, alreadyHit: false };
                 }
-                const k = Math.floor(line);
-                const pUnder = poissonCdf(expectedGoals, k);
+                // Si ya superaron la línea en vivo (ej. van 3 goles y la línea es 2.5)
+                if (liveGoalsNow > line) {
+                    return { line, overOdd: 1.05, underOdd: 9.50, probOver: 96, alreadyHit: true };
+                }
+                const goalsNeeded = Math.floor(line) - liveGoalsNow;
+                const pUnder = poissonCdf(remainingExpected, goalsNeeded);
                 const pOver = 1 - pUnder;
                 return {
                     line,
-                    overOdd: clampOdd(1 / pOver, 1.20, 5.50),
-                    underOdd: clampOdd(1 / pUnder, 1.20, 5.50),
-                    probOver: Math.round(pOver * 100)
+                    overOdd: clampOdd(1 / pOver, 1.14, 6.50),
+                    underOdd: clampOdd(1 / pUnder, 1.14, 6.50),
+                    probOver: Math.round(pOver * 100),
+                    alreadyHit: false
                 };
             });
 
@@ -1218,23 +1252,32 @@
 
             const playersOdds = matchPlayers.map(p => {
                 const st = pMap[p.id];
-                if (!st || st.pj < 2) {
+                const livePlayerGoals = (match.goals && match.goals[p.id]) || 0;
+
+                if ((!st || st.pj < 1) && !isLive) {
                     return { player: p, team: p.team, goals: st?.goals || 0, mvps: st?.mvps || 0, odd1: 2.00, odd2: 2.00, oddMvp: 2.00, prob1: 50, prob2: 50, probMvp: 17 };
                 }
-                const gpg = Math.max(0.15, Math.min(2.8, st.goals / st.pj));
-                const pZero = Math.exp(-gpg);
-                const pOne = gpg * pZero;
-                const prob1 = Math.max(0.15, Math.min(0.88, 1 - pZero));
-                const prob2 = Math.max(0.08, Math.min(0.75, 1 - (pZero + pOne)));
-                const mvpRate = Math.max(0.08, Math.min(0.65, (st.mvps + 0.5) / (st.pj + 3)));
+                const baseGpg = st && st.pj > 0 ? Math.max(0.18, Math.min(2.8, st.goals / st.pj)) : 0.65;
+                const remGpg = baseGpg * remainingFraction;
+                const pZero = Math.exp(-remGpg);
+                const pOne = remGpg * pZero;
+
+                const prob1 = livePlayerGoals >= 1 ? 0.95 : Math.max(0.15, Math.min(0.88, 1 - pZero));
+                const prob2 = livePlayerGoals >= 2 ? 0.95 : (livePlayerGoals === 1 ? Math.max(0.15, Math.min(0.85, 1 - pZero)) : Math.max(0.08, Math.min(0.75, 1 - (pZero + pOne))));
+
+                const pjCount = st ? st.pj : 0;
+                const mvpBase = (st ? st.mvps + 0.5 : 0.5) / (pjCount + 3);
+                const mvpLiveBoost = livePlayerGoals * 0.14;
+                const mvpRate = Math.max(0.08, Math.min(0.72, mvpBase + mvpLiveBoost));
+
                 return {
                     player: p,
                     team: p.team,
-                    goals: st.goals,
-                    mvps: st.mvps,
-                    odd1: clampOdd(1 / prob1, 1.20, 5.50),
-                    odd2: clampOdd(1 / prob2, 1.40, 7.50),
-                    oddMvp: clampOdd(1 / mvpRate, 1.50, 7.00),
+                    goals: (st?.goals || 0) + livePlayerGoals,
+                    mvps: st?.mvps || 0,
+                    odd1: clampOdd(1 / prob1, 1.06, 5.50),
+                    odd2: clampOdd(1 / prob2, 1.08, 7.50),
+                    oddMvp: clampOdd(1 / mvpRate, 1.35, 7.00),
                     prob1: Math.round(prob1 * 100),
                     prob2: Math.round(prob2 * 100),
                     probMvp: Math.round(mvpRate * 100)
@@ -1243,34 +1286,34 @@
 
             // Doble Oportunidad (solo fase regular donde existe empate)
             const base = computeMatchOdds(match, false);
-            const p1X = Math.min(0.92, Math.max(0.15, (base.probHome + base.probDraw) / 100));
-            const pX2 = Math.min(0.92, Math.max(0.15, (base.probDraw + base.probAway) / 100));
-            const p12 = Math.min(0.94, Math.max(0.20, (base.probHome + base.probAway) / 100));
+            const p1X = Math.min(0.94, Math.max(0.12, (base.probHome + base.probDraw) / 100));
+            const pX2 = Math.min(0.94, Math.max(0.12, (base.probDraw + base.probAway) / 100));
+            const p12 = Math.min(0.95, Math.max(0.20, (base.probHome + base.probAway) / 100));
             const doubleChance = {
-                odd1X: !base.isDynamic ? 2.00 : clampOdd(1 / p1X, 1.12, 3.80),
-                oddX2: !base.isDynamic ? 2.00 : clampOdd(1 / pX2, 1.12, 3.80),
-                odd12: !base.isDynamic ? 2.00 : clampOdd(1 / p12, 1.10, 3.20),
+                odd1X: !base.isDynamic ? 2.00 : clampOdd(1 / p1X, 1.08, 4.50),
+                oddX2: !base.isDynamic ? 2.00 : clampOdd(1 / pX2, 1.08, 4.50),
+                odd12: !base.isDynamic ? 2.00 : clampOdd(1 / p12, 1.08, 3.60),
                 prob1X: Math.round(p1X * 100),
                 probX2: Math.round(pX2 * 100),
                 prob12: Math.round(p12 * 100)
             };
 
-            return { isDynamic: hasEnoughData, expectedGoals: expectedGoals.toFixed(1), lines, playersOdds, doubleChance };
+            return { isDynamic: hasHistory || isLive, expectedGoals: totalExpected.toFixed(1), lines, playersOdds, doubleChance };
         }
 
-        // Cuotas para Apuestas Especiales del Torneo (Campeón, Bota de Oro, MVP, 1° de Grupo)
+        // Cuotas para Apuestas Especiales del Torneo (tope x5 para grupos y x10 para campeón/goleador/MVP)
         function computeTournamentSpecials() {
             const statsMap = getAllTeamsStatsMap();
             const pMap = getPlayerStatsMap();
             const teams = tournamentState.teams || [];
             const anyPlayed = tournamentState.matches.some(m => m.played);
 
-            // 1. Campeón del Torneo
+            // 1. Campeón del Torneo (tope x10.00)
             const teamScores = teams.map(t => {
                 const s = statsMap[t.id];
                 if (!s || s.pj === 0) return { team: t, score: 10, label: 'Sin partidos' };
                 const ppg = s.pts / s.pj;
-                const score = Math.max(2, 10 + (ppg * 14) + (s.dg * 2.5));
+                const score = Math.max(3, 10 + (ppg * 12) + (s.dg * 2.2));
                 return { team: t, score, label: `${s.pts} pts • ${s.pj} PJ` };
             });
             const totalTeamScore = teamScores.reduce((acc, x) => acc + x.score, 0) || 1;
@@ -1281,16 +1324,16 @@
                     name: x.team.name,
                     sub: x.label,
                     team: x.team,
-                    odd: !anyPlayed ? 2.00 : clampOdd(1 / prob, 1.35, 15.00),
+                    odd: !anyPlayed ? 2.00 : clampOdd(1 / prob, 1.35, 10.00),
                     prob: Math.round(prob * 100)
                 };
             }).sort((a, b) => a.odd - b.odd);
 
-            // 2. Máximo Goleador (Bota de Oro)
+            // 2. Máximo Goleador (Bota de Oro, tope x10.00)
             const allPlayers = Object.values(pMap);
             const scorerWeights = allPlayers.map(st => {
                 const gpg = st.pj > 0 ? st.goals / st.pj : 0;
-                const weight = Math.max(1, 2 + (st.goals * 4) + (gpg * 6));
+                const weight = Math.max(2, 3 + (st.goals * 3.5) + (gpg * 5));
                 return { st, weight };
             });
             const totalScorerW = scorerWeights.reduce((acc, x) => acc + x.weight, 0) || 1;
@@ -1301,14 +1344,14 @@
                     name: x.st.player.name,
                     sub: `${x.st.team.name} • ${x.st.goals} goles`,
                     team: x.st.team,
-                    odd: !anyPlayed ? 2.00 : clampOdd(1 / prob, 1.40, 18.00),
+                    odd: !anyPlayed ? 2.00 : clampOdd(1 / prob, 1.40, 10.00),
                     prob: Math.round(prob * 100)
                 };
             }).sort((a, b) => a.odd - b.odd);
 
-            // 3. Mejor Jugador del Torneo (Más MVPs)
+            // 3. Mejor Jugador del Torneo (Más MVPs, tope x10.00)
             const mvpWeights = allPlayers.map(st => {
-                const weight = Math.max(1, 2 + (st.mvps * 6) + (st.goals * 1.5));
+                const weight = Math.max(2, 3 + (st.mvps * 5) + (st.goals * 1.2));
                 return { st, weight };
             });
             const totalMvpW = mvpWeights.reduce((acc, x) => acc + x.weight, 0) || 1;
@@ -1319,16 +1362,16 @@
                     name: x.st.player.name,
                     sub: `${x.st.team.name} • ${x.st.mvps} MVP`,
                     team: x.st.team,
-                    odd: !anyPlayed ? 2.00 : clampOdd(1 / prob, 1.40, 18.00),
+                    odd: !anyPlayed ? 2.00 : clampOdd(1 / prob, 1.40, 10.00),
                     prob: Math.round(prob * 100)
                 };
             }).sort((a, b) => a.odd - b.odd);
 
-            // 4. Ganador de cada Grupo (1° puesto)
+            // 4. Ganador de cada Grupo (1° puesto, tope x5.00)
             const groupWinners = (tournamentState.groups || []).map(g => {
                 const rows = calculateGroupStandings(g);
                 const weights = rows.map(r => {
-                    const w = r.pj === 0 ? 10 : Math.max(2, 10 + (r.pts * 4) + (r.dg * 1.5));
+                    const w = r.pj === 0 ? 10 : Math.max(3, 10 + (r.pts * 3.5) + (r.dg * 1.4));
                     return { row: r, w };
                 });
                 const sumW = weights.reduce((acc, x) => acc + x.w, 0) || 1;
@@ -1341,7 +1384,7 @@
                             name: x.row.team.name,
                             sub: `${x.row.pts} pts • DG ${x.row.dg >= 0 ? '+' + x.row.dg : x.row.dg}`,
                             team: x.row.team,
-                            odd: !anyPlayed ? 2.00 : clampOdd(1 / prob, 1.25, 10.00),
+                            odd: !anyPlayed ? 2.00 : clampOdd(1 / prob, 1.25, 5.00),
                             prob: Math.round(prob * 100)
                         };
                     })
@@ -2349,7 +2392,9 @@
                                 <span class="uppercase font-semibold">${escHtml(isKnockout ? m.stageName : m.groupName)}</span>
                                 ${m.played
                                     ? `<span class="bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.2 rounded">FINALIZADO</span>`
-                                    : `<span class="bg-amber-500/15 text-[#ffdf1b] font-bold px-1.5 py-0.2 rounded">${odds.isDynamic ? 'CUOTA DINÁMICA' : 'CUOTA x2'}</span>`
+                                    : odds.isLive
+                                        ? `<span class="bg-rose-500/25 text-rose-300 font-extrabold px-1.5 py-0.2 rounded animate-pulse">● EN VIVO</span>`
+                                        : `<span class="bg-amber-500/15 text-[#ffdf1b] font-bold px-1.5 py-0.2 rounded">${odds.isDynamic ? 'CUOTA DINÁMICA' : 'CUOTA x2'}</span>`
                                 }
                                 ${!m.played
                                     ? `<span class="bg-[#027b5b]/30 group-hover:bg-[#027b5b] text-emerald-300 group-hover:text-white border border-emerald-500/40 font-bold px-2 py-0.2 rounded transition">+ Crear Apuesta (Bet Builder) &rsaquo;</span>`
@@ -2372,7 +2417,7 @@
                                     <span class="text-sm font-bold text-white group-hover:text-[#ffdf1b] transition truncate">${escHtml(home.name)}</span>
                                     ${hPos ? `<span class="text-[10px] text-neutral-400 font-semibold">${hPos}°</span>` : ''}
                                 </div>
-                                ${m.played ? `<span class="font-sport text-xl font-bold ${m.homeScore > m.awayScore ? 'text-[#ffdf1b]' : 'text-neutral-300'}">${m.homeScore}</span>` : ''}
+                                ${(m.played || odds.isLive) ? `<span class="font-sport text-xl font-bold ${m.homeScore > m.awayScore ? 'text-[#ffdf1b]' : 'text-neutral-300'}">${m.homeScore}</span>` : ''}
                             </div>
 
                             <!-- Visitante -->
@@ -2382,7 +2427,7 @@
                                     <span class="text-sm font-bold text-white group-hover:text-[#ffdf1b] transition truncate">${escHtml(away.name)}</span>
                                     ${aPos ? `<span class="text-[10px] text-neutral-400 font-semibold">${aPos}°</span>` : ''}
                                 </div>
-                                ${m.played ? `<span class="font-sport text-xl font-bold ${m.awayScore > m.homeScore ? 'text-[#ffdf1b]' : 'text-neutral-300'}">${m.awayScore}</span>` : ''}
+                                ${(m.played || odds.isLive) ? `<span class="font-sport text-xl font-bold ${m.awayScore > m.homeScore ? 'text-[#ffdf1b]' : 'text-neutral-300'}">${m.awayScore}</span>` : ''}
                             </div>
                         </div>
 
