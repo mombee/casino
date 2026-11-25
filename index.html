@@ -242,7 +242,7 @@
                     <!-- Explicación corta de cuotas -->
                     <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-300">
                         <div>
-                            <span class="text-[#ffdf1b] font-bold">Desafíos Directos 1v1:</span> Elegí cualquier cuota (1X2, +Goles o Goles de Jugador) y mandale la apuesta directa a otro usuario registrado.
+                            <span class="text-[#ffdf1b] font-bold">Bet Builder y Combinadas 1v1:</span> Hacé clic en cualquier partido para abrir el <strong>Crear Apuesta</strong> (1X2, Doble Oportunidad, Goles, MVP) o combiná varios partidos en el boleto.
                         </div>
                         <span id="matches-progress-badge" class="bg-[#1e1e1e] border border-[#444] text-emerald-400 font-bold px-2.5 py-0.5 rounded">0 / 0</span>
                     </div>
@@ -255,29 +255,34 @@
                 <aside class="lg:col-span-4 lg:sticky lg:top-28 space-y-4">
                     <div class="bg-[#282828] border border-[#3d3d3d] rounded-lg overflow-hidden shadow-xl">
                         <div class="bg-[#027b5b] px-4 py-3 flex items-center justify-between">
-                            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Boleto Desafío 1v1</h2>
-                            <span class="text-[11px] bg-black/25 text-[#ffdf1b] font-bold px-2 py-0.5 rounded">Directo a Usuario</span>
+                            <div class="flex items-center space-x-2">
+                                <h2 class="text-sm font-bold text-white uppercase tracking-wider">Boleto Desafío 1v1</h2>
+                                <span id="slip-legs-count" class="hidden bg-[#ffdf1b] text-[#111] text-[11px] font-extrabold px-2 py-0.2 rounded-full">1</span>
+                            </div>
+                            <button id="slip-clear-all-btn" onclick="clearBetSlip()" class="hidden text-[11px] text-emerald-100 hover:text-white underline">Vaciar</button>
                         </div>
 
                         <!-- Sin selección -->
                         <div id="slip-empty" class="p-6 text-center space-y-2">
-                            <div class="text-neutral-400 text-xs">Hacé clic en cualquier cuota de un partido o de "Apuestas Especiales" para enviarle un desafío 1v1 a otro usuario.</div>
+                            <div class="text-neutral-400 text-xs">Hacé clic en un partido para abrir el <strong>Bet Builder</strong> o tocá cualquier cuota (1X2, Doble Oportunidad, Goles, MVP) para armar una apuesta simple o combinada 1v1.</div>
                         </div>
 
                         <!-- Con selección -->
                         <div id="slip-form" class="hidden p-4 space-y-4">
-                            <div class="bg-[#1f1f1f] border border-[#3a3a3a] rounded p-3 space-y-1">
-                                <div class="flex items-center justify-between">
-                                    <span id="slip-match-meta" class="text-[10px] font-bold uppercase text-emerald-400">Fecha 1</span>
-                                    <button onclick="clearBetSlip()" class="text-[11px] text-neutral-400 hover:text-white">✕ Quitar</button>
+                            <!-- Tipo de boleto (Simple vs Combinada / Bet Builder) -->
+                            <div class="flex items-center justify-between bg-[#1f1f1f] border border-[#3a3a3a] rounded px-3 py-2">
+                                <div>
+                                    <div id="slip-type-title" class="text-xs font-extrabold uppercase text-emerald-400">Apuesta Simple</div>
+                                    <div id="slip-prob-note" class="text-[11px] text-neutral-400">Cuota total del desafío</div>
                                 </div>
-                                <div id="slip-match-teams" class="text-xs text-neutral-300 font-medium">Local vs Visitante</div>
-                                <div class="flex items-center justify-between pt-1">
-                                    <span id="slip-pick-label" class="text-sm font-bold text-white">Gana Argentina</span>
-                                    <span id="slip-odd-display" class="text-base font-extrabold text-[#ffdf1b]">2.00</span>
+                                <div class="text-right">
+                                    <div class="text-[10px] text-neutral-400 uppercase">Cuota Total</div>
+                                    <div id="slip-odd-display" class="text-lg font-extrabold text-[#ffdf1b]">2.00</div>
                                 </div>
-                                <div id="slip-prob-note" class="text-[11px] text-neutral-400">Cuota fija inicial (primeros partidos)</div>
                             </div>
+
+                            <!-- Lista de selecciones del boleto -->
+                            <div id="slip-legs-list" class="space-y-2 max-h-60 overflow-y-auto pr-0.5"></div>
 
                             <!-- Selección de Rival 1v1 -->
                             <div class="space-y-1.5">
@@ -322,7 +327,7 @@
                                 Enviar Desafío 1v1
                             </button>
                             <p class="text-[11px] text-neutral-400 text-center leading-snug">
-                                El desafío le llega directo al usuario elegido. Si lo rechaza o no responde antes de que cierre el evento, se te devuelve el saldo.
+                                En combinadas, deben cumplirse <strong>todas</strong> tus selecciones para ganar el pozo. Si falla al menos una, gana el rival.
                             </p>
                         </div>
                     </div>
@@ -495,6 +500,54 @@
     </main>
 
     <!-- ==========================================
+         MODAL: BET BUILDER / CREAR APUESTA (ESTILO BET365)
+    =========================================== -->
+    <div id="bet-builder-modal" class="fixed inset-0 bg-black/80 backdrop-blur-xs z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <div class="bg-[#242424] border border-[#444] rounded-xl max-w-2xl w-full overflow-hidden shadow-2xl my-6 flex flex-col max-h-[90vh]">
+            <!-- Header estilo bet365 Bet Builder -->
+            <div class="bg-[#027b5b] px-5 py-3.5 flex items-center justify-between shrink-0">
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <span class="bg-[#ffdf1b] text-[#111] text-[10px] font-extrabold uppercase px-2 py-0.5 rounded">Crear Apuesta</span>
+                        <span id="bb-match-meta" class="text-[11px] text-emerald-100 font-semibold uppercase">Fecha 1</span>
+                    </div>
+                    <h3 id="bb-match-title" class="text-base sm:text-lg font-extrabold text-white mt-0.5">Argentina vs España</h3>
+                </div>
+                <button onclick="closeBetBuilderModal()" class="text-emerald-100 hover:text-white text-2xl leading-none px-1">&times;</button>
+            </div>
+
+            <!-- Barra de pestañas de mercados dentro del partido -->
+            <div class="bg-[#1c1c1c] border-b border-[#3a3a3a] px-4 py-2 flex items-center space-x-2 overflow-x-auto text-xs shrink-0">
+                <button onclick="setBetBuilderTab('ALL')" id="bb-tab-ALL" class="px-3 py-1 rounded font-bold bg-[#027b5b] text-white whitespace-nowrap">Todos</button>
+                <button onclick="setBetBuilderTab('RESULT')" id="bb-tab-RESULT" class="px-3 py-1 rounded font-semibold bg-[#303030] text-neutral-300 whitespace-nowrap">Resultado y Doble Op.</button>
+                <button onclick="setBetBuilderTab('GOALS')" id="bb-tab-GOALS" class="px-3 py-1 rounded font-semibold bg-[#303030] text-neutral-300 whitespace-nowrap">Total de Goles</button>
+                <button onclick="setBetBuilderTab('PLAYERS')" id="bb-tab-PLAYERS" class="px-3 py-1 rounded font-semibold bg-[#303030] text-neutral-300 whitespace-nowrap">Goleadores</button>
+                <button onclick="setBetBuilderTab('MVP')" id="bb-tab-MVP" class="px-3 py-1 rounded font-semibold bg-[#303030] text-neutral-300 whitespace-nowrap">MVP del Partido</button>
+            </div>
+
+            <!-- Cuerpo scrolleable con mercados -->
+            <div id="bb-markets-body" class="p-4 space-y-4 overflow-y-auto flex-grow"></div>
+
+            <!-- Footer Resumen del Bet Builder -->
+            <div class="bg-[#1a1a1a] border-t border-[#3a3a3a] px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+                <div class="min-w-0">
+                    <div id="bb-summary-count" class="text-xs font-bold text-white">0 selecciones en este partido</div>
+                    <div id="bb-summary-list" class="text-[11px] text-neutral-400 truncate">Tocá una o varias cuotas para combinarlas</div>
+                </div>
+                <div class="flex items-center justify-between sm:justify-end space-x-3 shrink-0">
+                    <div class="text-right">
+                        <div class="text-[10px] uppercase text-neutral-400">Cuota Partido</div>
+                        <div id="bb-combined-odd" class="text-lg font-extrabold text-[#ffdf1b]">1.00</div>
+                    </div>
+                    <button onclick="closeBetBuilderModal()" class="bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] font-extrabold text-xs sm:text-sm px-4 py-2.5 rounded shadow transition">
+                        Listo • Ir al Boleto
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
          MODAL: RECARGAR SALDO
     =========================================== -->
     <div id="deposit-modal" class="fixed inset-0 bg-black/75 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
@@ -607,12 +660,54 @@
 
         let selectedRoundFilter = 'ALL';
         let myBetsFilter = 'ALL';
-        let activeSlip = null; // { category, matchId, isKnockout, marketType, pick, targetId, line, pickLabel, odd, homeName, awayName, meta, probText }
+        // Lista de patas (selecciones) en el boleto actual. Soporta Simple (1 pata) y Combinada / Bet Builder (2+ patas)
+        let activeSlipLegs = [];
         let authMode = 'login';
-        let expandedMatchProps = {}; // matchId -> boolean (desplegable de +goles y goles por jugador)
+        let activeBuilderMatchId = null;
+        let activeBuilderIsKo = false;
+        let activeBuilderTab = 'ALL';
+
+        /* ==========================================================================
+           3. RECURSOS VISUALES DE SELECCIONES Y UTILIDADES
+           ========================================================================== */
+        const FLAG_ISO = {
+            ARG: 'ar', BRA: 'br', URU: 'uy', FRA: 'fr', ESP: 'es', GER: 'de', ITA: 'it',
+            ENG: 'gb-eng', POR: 'pt', NED: 'nl', COL: 'co', CRO: 'hr', MAR: 'ma', JPN: 'jp',
+            MEX: 'mx', USA: 'us', CAN: 'ca', CHL: 'cl', AYB: 'ag', BEL: 'be', SUI: 'ch',
+            DEN: 'dk', SWE: 'se', NOR: 'no', POL: 'pl', AUT: 'at', SCO: 'gb-sct', WAL: 'gb-wls',
+            TUR: 'tr', SRB: 'rs', UKR: 'ua', CZE: 'cz', HUN: 'hu', GRE: 'gr', IRL: 'ie',
+            SEN: 'sn', NGA: 'ng', EGY: 'eg', ALG: 'dz', TUN: 'tn', CMR: 'cm', GHA: 'gh',
+            CIV: 'ci', RSA: 'za', CPV: 'cv', PAR: 'py', ECU: 'ec', PER: 'pe', BOL: 'bo',
+            VEN: 've', CRC: 'cr', PAN: 'pa', JAM: 'jm', HON: 'hn', HAI: 'ht', CUW: 'cw',
+            KOR: 'kr', IRN: 'ir', AUS: 'au', KSA: 'sa', QAT: 'qa', UZB: 'uz', JOR: 'jo',
+            NZL: 'nz', CHN: 'cn'
+        };
+
+        function escHtml(str) {
+            return String(str || '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+        }
+
+        function flagMarkup(team, cls = 'w-5 h-3.5') {
+            if (!team) return '';
+            const code = String(team.code || '').slice(0, 3).toUpperCase();
+            const iso = String(team.flag || FLAG_ISO[team.code] || '').toLowerCase();
+            if (!/^[a-z]{2}(-[a-z]{2,3})?$/.test(iso)) {
+                return `<span class="text-[10px] font-bold px-1 py-0.5 rounded bg-neutral-700 text-white">${code}</span>`;
+            }
+            return `<img src="https://flagcdn.com/w40/${iso}.png" alt="${escHtml(team.name)}" class="${cls} object-cover rounded-[2px] border border-black/40 inline-block shrink-0" loading="lazy" onerror="this.replaceWith(document.createTextNode('${code}'))">`;
+        }
+
+        function formatMoney(n) {
+            return '$' + Math.round(Number(n) || 0).toLocaleString('es-AR');
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            t.classList.remove('hidden');
             clearTimeout(window._toastTimer);
             window._toastTimer = setTimeout(() => t.classList.add('hidden'), 3400);
-        
+        }
 
         function uid() {
             return 'bet_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
@@ -1124,25 +1219,43 @@
             const playersOdds = matchPlayers.map(p => {
                 const st = pMap[p.id];
                 if (!st || st.pj < 2) {
-                    return { player: p, team: p.team, goals: st?.goals || 0, odd1: 2.00, odd2: 2.00, prob1: 50, prob2: 50 };
+                    return { player: p, team: p.team, goals: st?.goals || 0, mvps: st?.mvps || 0, odd1: 2.00, odd2: 2.00, oddMvp: 2.00, prob1: 50, prob2: 50, probMvp: 17 };
                 }
                 const gpg = Math.max(0.15, Math.min(2.8, st.goals / st.pj));
                 const pZero = Math.exp(-gpg);
                 const pOne = gpg * pZero;
                 const prob1 = Math.max(0.15, Math.min(0.88, 1 - pZero));
                 const prob2 = Math.max(0.08, Math.min(0.75, 1 - (pZero + pOne)));
+                const mvpRate = Math.max(0.08, Math.min(0.65, (st.mvps + 0.5) / (st.pj + 3)));
                 return {
                     player: p,
                     team: p.team,
                     goals: st.goals,
+                    mvps: st.mvps,
                     odd1: clampOdd(1 / prob1, 1.20, 5.50),
                     odd2: clampOdd(1 / prob2, 1.40, 7.50),
+                    oddMvp: clampOdd(1 / mvpRate, 1.50, 7.00),
                     prob1: Math.round(prob1 * 100),
-                    prob2: Math.round(prob2 * 100)
+                    prob2: Math.round(prob2 * 100),
+                    probMvp: Math.round(mvpRate * 100)
                 };
             });
 
-            return { isDynamic: hasEnoughData, expectedGoals: expectedGoals.toFixed(1), lines, playersOdds };
+            // Doble Oportunidad (solo fase regular donde existe empate)
+            const base = computeMatchOdds(match, false);
+            const p1X = Math.min(0.92, Math.max(0.15, (base.probHome + base.probDraw) / 100));
+            const pX2 = Math.min(0.92, Math.max(0.15, (base.probDraw + base.probAway) / 100));
+            const p12 = Math.min(0.94, Math.max(0.20, (base.probHome + base.probAway) / 100));
+            const doubleChance = {
+                odd1X: !base.isDynamic ? 2.00 : clampOdd(1 / p1X, 1.12, 3.80),
+                oddX2: !base.isDynamic ? 2.00 : clampOdd(1 / pX2, 1.12, 3.80),
+                odd12: !base.isDynamic ? 2.00 : clampOdd(1 / p12, 1.10, 3.20),
+                prob1X: Math.round(p1X * 100),
+                probX2: Math.round(pX2 * 100),
+                prob12: Math.round(p12 * 100)
+            };
+
+            return { isDynamic: hasEnoughData, expectedGoals: expectedGoals.toFixed(1), lines, playersOdds, doubleChance };
         }
 
         // Cuotas para Apuestas Especiales del Torneo (Campeón, Bota de Oro, MVP, 1° de Grupo)
@@ -1239,11 +1352,72 @@
         }
 
         /* ==========================================================================
-           7. LÓGICA DE DESAFÍOS 1v1 (ENVIAR, ACEPTAR, RECHAZAR Y LIQUIDAR)
+           7. LÓGICA DE BET BUILDER, COMBINADAS Y DESAFÍOS 1v1
            ========================================================================== */
-        function toggleMatchProps(matchId) {
-            expandedMatchProps[matchId] = !expandedMatchProps[matchId];
+        function makeLegKey(leg) {
+            return `${leg.matchId}::${leg.marketType}::${leg.pick}::${leg.targetId || ''}::${leg.line ?? ''}`;
+        }
+
+        function isLegInSlip(matchId, marketType, pick, targetId = null, line = null) {
+            const key = makeLegKey({ matchId, marketType, pick, targetId, line });
+            return activeSlipLegs.some(l => makeLegKey(l) === key);
+        }
+
+        // Agrega o quita una selección del boleto (permite combinadas y Bet Builder intra-partido)
+        function toggleSlipLeg(leg) {
+            const key = makeLegKey(leg);
+            const existingIdx = activeSlipLegs.findIndex(l => makeLegKey(l) === key);
+
+            if (existingIdx !== -1) {
+                activeSlipLegs.splice(existingIdx, 1);
+            } else {
+                // Reglas de coherencia dentro del mismo partido:
+                // 1) No permitir dos resultados distintos del mercado 1X2 o Doble Oportunidad en el mismo partido
+                if (leg.marketType === '1X2' || leg.marketType === 'DOUBLE_CHANCE') {
+                    activeSlipLegs = activeSlipLegs.filter(l =>
+                        !(l.matchId === leg.matchId && (l.marketType === '1X2' || l.marketType === 'DOUBLE_CHANCE'))
+                    );
+                }
+                // 2) No permitir Over y Under de la misma línea de goles en el mismo partido
+                if (leg.marketType === 'TOTAL_GOALS') {
+                    activeSlipLegs = activeSlipLegs.filter(l =>
+                        !(l.matchId === leg.matchId && l.marketType === 'TOTAL_GOALS' && l.line === leg.line)
+                    );
+                }
+                // 3) No permitir dos goles distintos del mismo jugador en el mismo partido
+                if (leg.marketType === 'PLAYER_GOALS') {
+                    activeSlipLegs = activeSlipLegs.filter(l =>
+                        !(l.matchId === leg.matchId && l.marketType === 'PLAYER_GOALS' && l.targetId === leg.targetId)
+                    );
+                }
+                // 4) Solo un MVP por partido
+                if (leg.marketType === 'MATCH_MVP') {
+                    activeSlipLegs = activeSlipLegs.filter(l =>
+                        !(l.matchId === leg.matchId && l.marketType === 'MATCH_MVP')
+                    );
+                }
+                // 5) En apuestas especiales, reemplazar si ya eligió otra opción del mismo especial
+                if (leg.category === 'SPECIAL') {
+                    activeSlipLegs = activeSlipLegs.filter(l =>
+                        !(l.category === 'SPECIAL' && l.marketType === leg.marketType && l.pick === leg.pick)
+                    );
+                }
+
+                activeSlipLegs.push(leg);
+            }
+
+            renderBetSlip();
             renderMatches();
+            renderKnockout();
+            if (activeBuilderMatchId) renderBetBuilderModal();
+        }
+
+        function removeSlipLeg(index) {
+            activeSlipLegs.splice(index, 1);
+            renderBetSlip();
+            renderMatches();
+            renderKnockout();
+            if (activeBuilderMatchId) renderBetBuilderModal();
         }
 
         function selectBetOutcome(matchId, isKnockout, pick) {
@@ -1258,19 +1432,16 @@
             const odds = computeMatchOdds(match, isKnockout);
             let odd = odds.home;
             let pickLabel = `Gana ${home.name}`;
-            let probVal = odds.probHome;
 
             if (pick === 'DRAW') {
                 odd = odds.draw;
                 pickLabel = 'Empate';
-                probVal = odds.probDraw;
             } else if (pick === 'AWAY') {
                 odd = odds.away;
                 pickLabel = `Gana ${away.name}`;
-                probVal = odds.probAway;
             }
 
-            activeSlip = {
+            toggleSlipLeg({
                 category: 'MATCH',
                 matchId,
                 isKnockout,
@@ -1280,23 +1451,12 @@
                 line: null,
                 pickLabel,
                 odd,
-                homeName: home.name,
-                awayName: away.name,
-                meta: isKnockout ? match.stageName : `${match.groupName} • Fecha ${match.round || 1}`,
-                probText: odds.isDynamic
-                    ? `Cuota calculada por estadísticas (~${probVal}% prob.)`
-                    : 'Cuota fija inicial x2.00 (primeros partidos)'
-            };
-
-            renderBetSlip();
-            renderMatches();
-
-            if (window.innerWidth < 1024) {
-                document.getElementById('slip-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
+                matchTitle: `${home.name} vs ${away.name}`,
+                meta: isKnockout ? match.stageName : `${match.groupName} • Fecha ${match.round || 1}`
+            });
         }
 
-        function selectMatchPropBet(matchId, isKnockout, marketType, pick, targetId, line, odd, pickLabel, probVal, isDynamic) {
+        function selectMatchPropBet(matchId, isKnockout, marketType, pick, targetId, line, odd, pickLabel) {
             const list = isKnockout ? tournamentState.knockoutMatches : tournamentState.matches;
             const match = list.find(m => m.id === matchId);
             if (!match || match.played) return;
@@ -1304,7 +1464,7 @@
             const away = getTeam(match.awayId);
             if (!home || !away) return;
 
-            activeSlip = {
+            toggleSlipLeg({
                 category: 'MATCH',
                 matchId,
                 isKnockout,
@@ -1314,51 +1474,258 @@
                 line: line ?? null,
                 pickLabel,
                 odd,
-                homeName: home.name,
-                awayName: away.name,
-                meta: isKnockout ? match.stageName : `${match.groupName} • Fecha ${match.round || 1}`,
-                probText: isDynamic
-                    ? `Cuota dinámica (~${probVal}% prob.)`
-                    : 'Cuota fija inicial x2.00 (primeros partidos)'
-            };
-
-            renderBetSlip();
-            renderMatches();
-
-            if (window.innerWidth < 1024) {
-                document.getElementById('slip-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
+                matchTitle: `${home.name} vs ${away.name}`,
+                meta: isKnockout ? match.stageName : `${match.groupName} • Fecha ${match.round || 1}`
+            });
         }
 
-        function selectSpecialBet(marketType, groupName, targetId, odd, pickLabel, probVal, isDynamic) {
-            activeSlip = {
+        function selectSpecialBet(marketType, groupName, targetId, odd, pickLabel) {
+            toggleSlipLeg({
                 category: 'SPECIAL',
                 matchId: 'TOURNAMENT_SPECIAL',
                 isKnockout: false,
-                marketType, // 'CHAMPION' | 'TOP_SCORER' | 'TOP_MVP' | 'GROUP_WINNER'
+                marketType,
                 pick: groupName || marketType,
                 targetId,
                 line: null,
                 pickLabel,
                 odd,
-                homeName: 'Especial Torneo 3v3',
-                awayName: groupName || 'Mundial 26',
-                meta: 'Apuesta Especial • Torneo Completo',
-                probText: isDynamic
-                    ? `Cuota según rendimiento actual (~${probVal}% prob.)`
-                    : 'Cuota fija inicial x2.00'
-            };
+                matchTitle: 'Especial Torneo 3v3',
+                meta: 'Apuesta Especial • Torneo Completo'
+            });
 
-            // Cambiar a vista partidos donde está el boleto visible o abrir scroll
             switchView('view-matches');
-            renderBetSlip();
-            showToast(`Seleccionaste "${pickLabel}". Elegí el rival en el boleto.`);
+            showToast(`Agregado al boleto: "${pickLabel}".`);
+        }
+
+        // Calcula la cuota combinada multiplicando las patas (con ligero ajuste si son del mismo partido)
+        function computeCombinedOdd(legs) {
+            if (!legs.length) return 1.00;
+            if (legs.length === 1) return Number(legs[0].odd.toFixed(2));
+
+            let product = 1;
+            const matchCounts = {};
+            legs.forEach(l => {
+                product *= l.odd;
+                matchCounts[l.matchId] = (matchCounts[l.matchId] || 0) + 1;
+            });
+
+            // Si hay correlación dentro del mismo partido (ej: gana equipo + gol de su delantero), suavizamos un 8% por pata extra en ese partido
+            let correlationFactor = 1;
+            Object.values(matchCounts).forEach(cnt => {
+                if (cnt > 1) correlationFactor *= Math.pow(0.92, cnt - 1);
+            });
+
+            return clampOdd(product * correlationFactor, 1.25, 35.00);
+        }
+
+        /* --- Modal Bet Builder (Crear Apuesta por partido) --- */
+        function openBetBuilderModal(matchId, isKnockout = false) {
+            const list = isKnockout ? tournamentState.knockoutMatches : tournamentState.matches;
+            const match = list.find(m => m.id === matchId);
+            if (!match || match.played) return;
+            const home = getTeam(match.homeId);
+            const away = getTeam(match.awayId);
+            if (!home || !away) return;
+
+            activeBuilderMatchId = matchId;
+            activeBuilderIsKo = isKnockout;
+            activeBuilderTab = 'ALL';
+            setBetBuilderTab('ALL');
+            document.getElementById('bet-builder-modal').classList.remove('hidden');
+        }
+
+        function closeBetBuilderModal() {
+            document.getElementById('bet-builder-modal').classList.add('hidden');
+            activeBuilderMatchId = null;
+            if (activeSlipLegs.length > 0 && window.innerWidth < 1024) {
+                document.getElementById('slip-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        function setBetBuilderTab(tab) {
+            activeBuilderTab = tab;
+            ['ALL', 'RESULT', 'GOALS', 'PLAYERS', 'MVP'].forEach(t => {
+                const btn = document.getElementById('bb-tab-' + t);
+                if (btn) {
+                    btn.className = t === tab
+                        ? 'px-3 py-1 rounded font-bold bg-[#027b5b] text-white whitespace-nowrap'
+                        : 'px-3 py-1 rounded font-semibold bg-[#303030] text-neutral-300 hover:bg-[#3d3d3d] whitespace-nowrap';
+                }
+            });
+            renderBetBuilderModal();
+        }
+
+        function renderBetBuilderModal() {
+            if (!activeBuilderMatchId) return;
+            const list = activeBuilderIsKo ? tournamentState.knockoutMatches : tournamentState.matches;
+            const match = list.find(m => m.id === activeBuilderMatchId);
+            if (!match) return;
+
+            const home = getTeam(match.homeId);
+            const away = getTeam(match.awayId);
+            if (!home || !away) return;
+
+            document.getElementById('bb-match-meta').textContent = activeBuilderIsKo
+                ? match.stageName
+                : `${match.groupName} • Fecha ${match.round || 1}`;
+            document.getElementById('bb-match-title').textContent = `${home.name} vs ${away.name}`;
+
+            const odds1x2 = computeMatchOdds(match, activeBuilderIsKo);
+            const props = computeMatchPropOdds(match);
+            const body = document.getElementById('bb-markets-body');
+
+            const showSection = (sec) => activeBuilderTab === 'ALL' || activeBuilderTab === sec;
+
+            let html = '';
+
+            // 1. Resultado Final (1X2) y Doble Oportunidad
+            if (showSection('RESULT')) {
+                html += `
+                    <div class="bg-[#2c2c2c] border border-[#3d3d3d] rounded-lg p-3.5 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Resultado del Partido</span>
+                            <span class="text-[10px] text-neutral-400">${odds1x2.isDynamic ? 'Cuotas por tabla' : 'Cuota x2.00'}</span>
+                        </div>
+                        <div class="grid ${activeBuilderIsKo ? 'grid-cols-2' : 'grid-cols-3'} gap-2">
+                            <button onclick="selectBetOutcome('${match.id}', ${activeBuilderIsKo}, 'HOME')" class="odd-btn ${isLegInSlip(match.id, '1X2', 'HOME') ? 'is-active' : ''} rounded py-2 px-2 text-center">
+                                <div class="text-[11px] font-semibold truncate">Gana ${escHtml(home.name)}</div>
+                                <div class="odd-val text-sm">${odds1x2.home.toFixed(2)}</div>
+                            </button>
+                            ${!activeBuilderIsKo ? `
+                                <button onclick="selectBetOutcome('${match.id}', false, 'DRAW')" class="odd-btn ${isLegInSlip(match.id, '1X2', 'DRAW') ? 'is-active' : ''} rounded py-2 px-2 text-center">
+                                    <div class="text-[11px] font-semibold">Empate</div>
+                                    <div class="odd-val text-sm">${odds1x2.draw.toFixed(2)}</div>
+                                </button>
+                            ` : ''}
+                            <button onclick="selectBetOutcome('${match.id}', ${activeBuilderIsKo}, 'AWAY')" class="odd-btn ${isLegInSlip(match.id, '1X2', 'AWAY') ? 'is-active' : ''} rounded py-2 px-2 text-center">
+                                <div class="text-[11px] font-semibold truncate">Gana ${escHtml(away.name)}</div>
+                                <div class="odd-val text-sm">${odds1x2.away.toFixed(2)}</div>
+                            </button>
+                        </div>
+
+                        ${!activeBuilderIsKo ? `
+                            <div class="pt-2 border-t border-[#3b3b3b] space-y-2">
+                                <div class="text-xs font-bold uppercase tracking-wider text-emerald-400">Doble Oportunidad</div>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button onclick="selectMatchPropBet('${match.id}', false, 'DOUBLE_CHANCE', '1X', null, null, ${props.doubleChance.odd1X}, '${escHtml(home.name)} gana o empata')" class="odd-btn ${isLegInSlip(match.id, 'DOUBLE_CHANCE', '1X') ? 'is-active' : ''} rounded py-2 px-2 text-center">
+                                        <div class="text-[10px] font-semibold truncate">${escHtml(home.code)} o Empate</div>
+                                        <div class="odd-val text-sm">${props.doubleChance.odd1X.toFixed(2)}</div>
+                                    </button>
+                                    <button onclick="selectMatchPropBet('${match.id}', false, 'DOUBLE_CHANCE', '12', null, null, ${props.doubleChance.odd12}, 'Gana ${escHtml(home.code)} o ${escHtml(away.code)} (Sin empate)')" class="odd-btn ${isLegInSlip(match.id, 'DOUBLE_CHANCE', '12') ? 'is-active' : ''} rounded py-2 px-2 text-center">
+                                        <div class="text-[10px] font-semibold truncate">${escHtml(home.code)} o ${escHtml(away.code)}</div>
+                                        <div class="odd-val text-sm">${props.doubleChance.odd12.toFixed(2)}</div>
+                                    </button>
+                                    <button onclick="selectMatchPropBet('${match.id}', false, 'DOUBLE_CHANCE', 'X2', null, null, ${props.doubleChance.oddX2}, '${escHtml(away.name)} gana o empata')" class="odd-btn ${isLegInSlip(match.id, 'DOUBLE_CHANCE', 'X2') ? 'is-active' : ''} rounded py-2 px-2 text-center">
+                                        <div class="text-[10px] font-semibold truncate">${escHtml(away.code)} o Empate</div>
+                                        <div class="odd-val text-sm">${props.doubleChance.oddX2.toFixed(2)}</div>
+                                    </button>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+
+            // 2. Total de Goles
+            if (showSection('GOALS')) {
+                html += `
+                    <div class="bg-[#2c2c2c] border border-[#3d3d3d] rounded-lg p-3.5 space-y-2.5">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Total de Goles del Partido</span>
+                            <span class="text-[10px] text-neutral-400">${props.isDynamic ? `Esperado: ${props.expectedGoals} goles` : 'Cuota x2.00'}</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            ${props.lines.map(l => `
+                                <div class="bg-[#222] border border-[#3a3a3a] rounded p-2 space-y-1.5">
+                                    <div class="text-center text-[11px] font-bold text-neutral-300">Línea ${l.line}</div>
+                                    <div class="grid grid-cols-2 gap-1.5">
+                                        <button onclick="selectMatchPropBet('${match.id}', ${activeBuilderIsKo}, 'TOTAL_GOALS', 'OVER', null, ${l.line}, ${l.overOdd}, 'Más de ${l.line} goles (${home.code}-${away.code})')" class="odd-btn ${isLegInSlip(match.id, 'TOTAL_GOALS', 'OVER', null, l.line) ? 'is-active' : ''} rounded py-1.5 text-center">
+                                            <div class="text-[10px] opacity-80">+${l.line}</div>
+                                            <div class="odd-val text-xs">${l.overOdd.toFixed(2)}</div>
+                                        </button>
+                                        <button onclick="selectMatchPropBet('${match.id}', ${activeBuilderIsKo}, 'TOTAL_GOALS', 'UNDER', null, ${l.line}, ${l.underOdd}, 'Menos de ${l.line} goles (${home.code}-${away.code})')" class="odd-btn ${isLegInSlip(match.id, 'TOTAL_GOALS', 'UNDER', null, l.line) ? 'is-active' : ''} rounded py-1.5 text-center">
+                                            <div class="text-[10px] opacity-80">-${l.line}</div>
+                                            <div class="odd-val text-xs">${l.underOdd.toFixed(2)}</div>
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 3. Goleadores del partido
+            if (showSection('PLAYERS')) {
+                html += `
+                    <div class="bg-[#2c2c2c] border border-[#3d3d3d] rounded-lg p-3.5 space-y-2.5">
+                        <div class="text-xs font-bold uppercase tracking-wider text-emerald-400">Goleadores del Partido</div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            ${props.playersOdds.map(po => `
+                                <div class="bg-[#222] border border-[#3a3a3a] rounded px-3 py-2 flex items-center justify-between gap-2">
+                                    <div class="min-w-0">
+                                        <div class="text-xs font-bold text-white truncate">${escHtml(po.player.name)}</div>
+                                        <div class="text-[10px] text-neutral-400">${escHtml(po.team.name)} • ${po.goals} goles</div>
+                                    </div>
+                                    <div class="flex items-center space-x-1.5 shrink-0">
+                                        <button onclick="selectMatchPropBet('${match.id}', ${activeBuilderIsKo}, 'PLAYER_GOALS', 'PLAYER_OVER', '${po.player.id}', 0.5, ${po.odd1}, '${escHtml(po.player.name)} mete gol (+0.5)')" class="odd-btn ${isLegInSlip(match.id, 'PLAYER_GOALS', 'PLAYER_OVER', po.player.id, 0.5) ? 'is-active' : ''} rounded px-2.5 py-1 text-center">
+                                            <div class="text-[9px] opacity-75">1+ Gol</div>
+                                            <div class="odd-val text-xs">${po.odd1.toFixed(2)}</div>
+                                        </button>
+                                        <button onclick="selectMatchPropBet('${match.id}', ${activeBuilderIsKo}, 'PLAYER_GOALS', 'PLAYER_OVER', '${po.player.id}', 1.5, ${po.odd2}, '${escHtml(po.player.name)} mete 2+ goles')" class="odd-btn ${isLegInSlip(match.id, 'PLAYER_GOALS', 'PLAYER_OVER', po.player.id, 1.5) ? 'is-active' : ''} rounded px-2.5 py-1 text-center">
+                                            <div class="text-[9px] opacity-75">2+ Goles</div>
+                                            <div class="odd-val text-xs">${po.odd2.toFixed(2)}</div>
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 4. MVP del Partido
+            if (showSection('MVP')) {
+                html += `
+                    <div class="bg-[#2c2c2c] border border-[#3d3d3d] rounded-lg p-3.5 space-y-2.5">
+                        <div class="text-xs font-bold uppercase tracking-wider text-emerald-400">Figura del Partido (MVP)</div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            ${props.playersOdds.map(po => `
+                                <button onclick="selectMatchPropBet('${match.id}', ${activeBuilderIsKo}, 'MATCH_MVP', 'MVP', '${po.player.id}', null, ${po.oddMvp}, '${escHtml(po.player.name)} elegido MVP (${home.code}-${away.code})')" class="odd-btn ${isLegInSlip(match.id, 'MATCH_MVP', 'MVP', po.player.id) ? 'is-active' : ''} rounded px-3 py-2 flex items-center justify-between text-left">
+                                    <div class="min-w-0 pr-2">
+                                        <div class="text-xs font-bold truncate">${escHtml(po.player.name)}</div>
+                                        <div class="text-[10px] opacity-75">${escHtml(po.team.code)} • ${po.mvps} MVP en torneo</div>
+                                    </div>
+                                    <span class="odd-val text-sm shrink-0">${po.oddMvp.toFixed(2)}</span>
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            body.innerHTML = html;
+
+            // Actualizar footer del Bet Builder
+            const matchLegs = activeSlipLegs.filter(l => l.matchId === match.id);
+            document.getElementById('bb-summary-count').textContent = matchLegs.length === 1
+                ? '1 selección en este partido'
+                : `${matchLegs.length} selecciones en este partido`;
+            document.getElementById('bb-summary-list').textContent = matchLegs.length
+                ? matchLegs.map(l => l.pickLabel).join(' + ')
+                : 'Tocá una o varias cuotas para combinarlas';
+            document.getElementById('bb-combined-odd').textContent = matchLegs.length
+                ? computeCombinedOdd(matchLegs).toFixed(2)
+                : '1.00';
         }
 
         function clearBetSlip() {
-            activeSlip = null;
+            activeSlipLegs = [];
             renderBetSlip();
             renderMatches();
+            renderKnockout();
+            if (activeBuilderMatchId) renderBetBuilderModal();
         }
 
         function setQuickStake(amount) {
@@ -1381,30 +1748,65 @@
         function renderBetSlip() {
             const empty = document.getElementById('slip-empty');
             const form = document.getElementById('slip-form');
-            if (!activeSlip) {
+            const badge = document.getElementById('slip-legs-count');
+            const clearBtn = document.getElementById('slip-clear-all-btn');
+
+            if (!activeSlipLegs.length) {
                 empty.classList.remove('hidden');
                 form.classList.add('hidden');
+                if (badge) badge.classList.add('hidden');
+                if (clearBtn) clearBtn.classList.add('hidden');
                 return;
             }
+
             empty.classList.add('hidden');
             form.classList.remove('hidden');
+            if (badge) {
+                badge.textContent = activeSlipLegs.length;
+                badge.classList.remove('hidden');
+            }
+            if (clearBtn) clearBtn.classList.remove('hidden');
 
             renderRivalSelector();
-            document.getElementById('slip-match-meta').textContent = activeSlip.meta;
-            document.getElementById('slip-match-teams').textContent = `${activeSlip.homeName} vs ${activeSlip.awayName}`;
-            document.getElementById('slip-pick-label').textContent = activeSlip.pickLabel;
-            document.getElementById('slip-odd-display').textContent = activeSlip.odd.toFixed(2);
-            document.getElementById('slip-prob-note').textContent = activeSlip.probText;
+
+            const isParlay = activeSlipLegs.length > 1;
+            const sameMatch = isParlay && new Set(activeSlipLegs.map(l => l.matchId)).size === 1;
+            const combinedOdd = computeCombinedOdd(activeSlipLegs);
+
+            document.getElementById('slip-type-title').textContent = !isParlay
+                ? 'Apuesta Simple'
+                : sameMatch
+                    ? `Bet Builder (${activeSlipLegs.length} selecciones)`
+                    : `Combinada (${activeSlipLegs.length} selecciones)`;
+            document.getElementById('slip-prob-note').textContent = !isParlay
+                ? activeSlipLegs[0].meta
+                : 'Se deben cumplir todas las selecciones';
+            document.getElementById('slip-odd-display').textContent = combinedOdd.toFixed(2);
+
+            document.getElementById('slip-legs-list').innerHTML = activeSlipLegs.map((leg, idx) => `
+                <div class="bg-[#1f1f1f] border border-[#3a3a3a] rounded p-2.5 flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <div class="text-[10px] font-bold uppercase text-emerald-400 truncate">${escHtml(leg.matchTitle)}</div>
+                        <div class="text-xs font-bold text-white leading-snug">${escHtml(leg.pickLabel)}</div>
+                    </div>
+                    <div class="flex items-center space-x-2 shrink-0">
+                        <span class="text-xs font-extrabold text-[#ffdf1b]">${leg.odd.toFixed(2)}</span>
+                        <button onclick="removeSlipLeg(${idx})" class="text-neutral-400 hover:text-rose-400 text-xs font-bold px-1" title="Quitar">✕</button>
+                    </div>
+                </div>
+            `).join('');
+
             updateSlipCalc();
         }
 
         function updateSlipCalc() {
-            if (!activeSlip) return;
+            if (!activeSlipLegs.length) return;
             const u = currentUser ? usersMap[currentUser] : null;
             document.getElementById('slip-avail-balance').textContent = formatMoney(u ? u.balance : 0);
 
+            const combinedOdd = computeCombinedOdd(activeSlipLegs);
             const stake = Math.max(0, Math.round(Number(document.getElementById('slip-stake').value) || 0));
-            const totalPot = Math.round(stake * activeSlip.odd);
+            const totalPot = Math.round(stake * combinedOdd);
             const counterStake = Math.max(1, totalPot - stake);
 
             document.getElementById('slip-counter-stake').textContent = formatMoney(counterStake);
@@ -1418,7 +1820,7 @@
                 showToast('Iniciá sesión para enviar un desafío 1v1.');
                 return;
             }
-            if (!activeSlip) return;
+            if (!activeSlipLegs.length) return;
 
             const targetUser = document.getElementById('slip-rival-select').value;
             if (!targetUser || !usersMap[targetUser]) {
@@ -1441,28 +1843,35 @@
                 return;
             }
 
-            const totalPot = Math.round(stake * activeSlip.odd);
+            const combinedOdd = computeCombinedOdd(activeSlipLegs);
+            const totalPot = Math.round(stake * combinedOdd);
             const counterStake = Math.max(1, totalPot - stake);
+            const isParlay = activeSlipLegs.length > 1;
+            const firstLeg = activeSlipLegs[0];
+            const uniqueMatches = Array.from(new Set(activeSlipLegs.map(l => l.matchTitle)));
 
             const bet = {
                 id: uid(),
-                category: activeSlip.category || 'MATCH',
-                matchId: activeSlip.matchId,
-                isKnockout: activeSlip.isKnockout,
-                marketType: activeSlip.marketType || '1X2',
-                matchLabel: `${activeSlip.homeName} vs ${activeSlip.awayName}`,
-                meta: activeSlip.meta,
-                pick: activeSlip.pick,
-                targetId: activeSlip.targetId || null,
-                line: activeSlip.line ?? null,
-                pickLabel: activeSlip.pickLabel,
-                odd: activeSlip.odd,
+                category: isParlay ? 'PARLAY' : (firstLeg.category || 'MATCH'),
+                matchId: firstLeg.matchId,
+                isKnockout: firstLeg.isKnockout,
+                marketType: isParlay ? 'PARLAY' : (firstLeg.marketType || '1X2'),
+                matchLabel: uniqueMatches.length === 1 ? uniqueMatches[0] : `Combinada (${uniqueMatches.length} eventos)`,
+                meta: isParlay
+                    ? `Combinada • ${activeSlipLegs.length} selecciones`
+                    : firstLeg.meta,
+                pick: firstLeg.pick,
+                targetId: firstLeg.targetId || null,
+                line: firstLeg.line ?? null,
+                pickLabel: activeSlipLegs.map(l => l.pickLabel).join(' + '),
+                legs: activeSlipLegs.map(l => ({ ...l })),
+                odd: combinedOdd,
                 creator: currentUser,
                 creatorStake: stake,
                 targetUser: targetUser,
                 taker: null,
                 takerStake: counterStake,
-                status: 'OPEN', // 'OPEN' | 'MATCHED' | 'SETTLED' | 'REFUNDED' | 'REJECTED'
+                status: 'OPEN',
                 winnerUser: null,
                 createdAt: Date.now()
             };
@@ -1583,8 +1992,8 @@
         // Verifica si el torneo entero terminó (para liquidar Apuestas Especiales)
         function isTournamentFinished() {
             if (!tournamentState.matches.length) return false;
-            const regularAllPlayed = tournamentState.matches.every(m => m.played);
-            if (!regularAllPlayed) return false;
+            const regularDone = tournamentState.matches.every(m => m.played);
+            if (!regularDone) return false;
 
             if (tournamentState.format === 'LEAGUE' && tournamentState.leagueQualifiers === 0) {
                 return true;
@@ -1593,9 +2002,17 @@
             return Boolean(finalMatch && finalMatch.played && finalMatch.winnerId);
         }
 
-        // Evalúa si el creador ganó una apuesta de partido (1X2, Total Goles o Goles de Jugador)
+        // Evalúa si el creador ganó una apuesta de partido (1X2, Doble Oportunidad, Total Goles, Goles de Jugador o MVP)
         function evaluateMatchBetOutcome(bet, match) {
             const mType = bet.marketType || '1X2';
+
+            if (mType === 'DOUBLE_CHANCE') {
+                if (match._ko) return false;
+                if (bet.pick === '1X') return match.homeScore >= match.awayScore;
+                if (bet.pick === 'X2') return match.awayScore >= match.homeScore;
+                if (bet.pick === '12') return match.homeScore !== match.awayScore;
+                return false;
+            }
 
             if (mType === 'TOTAL_GOALS') {
                 const totalGoals = (match.homeScore || 0) + (match.awayScore || 0);
@@ -1605,6 +2022,10 @@
             if (mType === 'PLAYER_GOALS') {
                 const pGoals = (match.goals && match.goals[bet.targetId]) || 0;
                 return pGoals > bet.line;
+            }
+
+            if (mType === 'MATCH_MVP') {
+                return Boolean(match.mvpId && match.mvpId === bet.targetId);
             }
 
             // Por defecto: 1X2
@@ -1658,7 +2079,7 @@
             return false;
         }
 
-        // Liquidación automática cuando un partido o el torneo finaliza
+        // Liquidación automática cuando un partido o el torneo finaliza (soporta simples, especiales y combinadas)
         function checkAndSettleFinishedMatches() {
             const allMatches = [
                 ...tournamentState.matches.map(m => ({ ...m, _ko: false })),
@@ -1670,40 +2091,43 @@
             const tourneyDone = isTournamentFinished();
             const regularDone = tournamentState.matches.length > 0 && tournamentState.matches.every(m => m.played);
 
+            // Evalúa el estado de una sola pata: 'PENDING' | 'WON' | 'LOST'
+            const evaluateSingleLeg = (leg) => {
+                if (leg.category === 'SPECIAL') {
+                    const ready = leg.marketType === 'GROUP_WINNER' ? regularDone : tourneyDone;
+                    if (!ready) return 'PENDING';
+                    return evaluateSpecialBetOutcome(leg) ? 'WON' : 'LOST';
+                }
+                const m = matchById[leg.matchId];
+                if (!m || !m.played) return 'PENDING';
+                return evaluateMatchBetOutcome(leg, m) ? 'WON' : 'LOST';
+            };
+
             Object.values(betsMap).forEach(bet => {
                 if (!bet || (bet.status !== 'OPEN' && bet.status !== 'MATCHED')) return;
 
-                // Caso A: Apuestas Especiales de Torneo
-                if (bet.category === 'SPECIAL') {
-                    const readyToSettle = bet.marketType === 'GROUP_WINNER' ? regularDone : tourneyDone;
-                    if (!readyToSettle) return;
+                const legs = Array.isArray(bet.legs) && bet.legs.length > 0 ? bet.legs : [bet];
+                const results = legs.map(evaluateSingleLeg);
 
-                    if (bet.status === 'OPEN') {
-                        settleRefund(bet);
-                        return;
-                    }
-                    const creatorWon = evaluateSpecialBetOutcome(bet);
-                    const winnerUser = creatorWon ? bet.creator : bet.taker;
-                    const loserUser = creatorWon ? bet.taker : bet.creator;
-                    settleMatchedBet(bet, winnerUser, loserUser, bet.creatorStake + bet.takerStake);
-                    return;
-                }
-
-                // Caso B: Apuestas de Partido
-                const match = matchById[bet.matchId];
-                if (!match || !match.played) return;
-
+                // Si quedó OPEN y al menos un evento involucrado ya cerró -> devolver saldo al creador
                 if (bet.status === 'OPEN') {
-                    settleRefund(bet);
+                    if (results.some(r => r !== 'PENDING')) {
+                        settleRefund(bet);
+                    }
                     return;
                 }
 
-                const creatorWon = evaluateMatchBetOutcome(bet, match);
-                const winnerUser = creatorWon ? bet.creator : bet.taker;
-                const loserUser = creatorWon ? bet.taker : bet.creator;
-                const payout = bet.creatorStake + bet.takerStake;
+                // En apuestas MATCHED (1v1 activo):
+                // Si alguna pata ya perdió -> gana automáticamente el rival sin esperar al resto
+                if (results.includes('LOST')) {
+                    settleMatchedBet(bet, bet.taker, bet.creator, bet.creatorStake + bet.takerStake);
+                    return;
+                }
 
-                settleMatchedBet(bet, winnerUser, loserUser, payout);
+                // Si todas las patas ganaron -> gana el creador
+                if (results.every(r => r === 'WON')) {
+                    settleMatchedBet(bet, bet.creator, bet.taker, bet.creatorStake + bet.takerStake);
+                }
             });
         }
 
@@ -1912,81 +2336,15 @@
             const aPos = statsMap[away.id]?.pos;
             const matchOpenBets = openBets.filter(b => b.matchId === m.id);
             const mvp = m.mvpId ? getPlayer(m.mvpId) : null;
-            const isExpanded = Boolean(expandedMatchProps[m.id]);
+            const matchLegsCount = activeSlipLegs.filter(l => l.matchId === m.id).length;
 
-            const isSel = (mType, pick, targetId = null, line = null) =>
-                activeSlip &&
-                activeSlip.matchId === m.id &&
-                (activeSlip.marketType || '1X2') === mType &&
-                activeSlip.pick === pick &&
-                (activeSlip.targetId || null) === (targetId || null) &&
-                (activeSlip.line ?? null) === (line ?? null)
-                    ? 'is-active'
-                    : '';
-
-            let propsPanelHtml = '';
-            if (!m.played && isExpanded) {
-                const props = computeMatchPropOdds(m);
-                propsPanelHtml = `
-                    <div class="bg-[#1e1e1e] border border-[#3a3a3a] rounded-lg p-3 space-y-3 mt-2">
-                        <!-- Total de Goles del Partido -->
-                        <div class="space-y-1.5">
-                            <div class="flex items-center justify-between text-[11px]">
-                                <span class="font-bold uppercase tracking-wider text-emerald-400">Total de Goles del Partido</span>
-                                <span class="text-neutral-400">${props.isDynamic ? `Prom. esperado: ${props.expectedGoals} goles` : 'Cuota fija x2.00'}</span>
-                            </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                ${props.lines.map(l => `
-                                    <div class="bg-[#282828] border border-[#3a3a3a] rounded p-2 space-y-1.5">
-                                        <div class="text-center text-[11px] font-bold text-neutral-300">Línea ${l.line} Goles</div>
-                                        <div class="grid grid-cols-2 gap-1.5">
-                                            <button onclick="selectMatchPropBet('${m.id}', ${isKnockout}, 'TOTAL_GOALS', 'OVER', null, ${l.line}, ${l.overOdd}, 'Más de ${l.line} goles (${home.code}-${away.code})', ${l.probOver}, ${props.isDynamic})" class="odd-btn ${isSel('TOTAL_GOALS', 'OVER', null, l.line)} rounded py-1 px-1.5 text-center">
-                                                <div class="text-[10px] opacity-80">+${l.line}</div>
-                                                <div class="odd-val text-xs">${l.overOdd.toFixed(2)}</div>
-                                            </button>
-                                            <button onclick="selectMatchPropBet('${m.id}', ${isKnockout}, 'TOTAL_GOALS', 'UNDER', null, ${l.line}, ${l.underOdd}, 'Menos de ${l.line} goles (${home.code}-${away.code})', ${100 - l.probOver}, ${props.isDynamic})" class="odd-btn ${isSel('TOTAL_GOALS', 'UNDER', null, l.line)} rounded py-1 px-1.5 text-center">
-                                                <div class="text-[10px] opacity-80">-${l.line}</div>
-                                                <div class="odd-val text-xs">${l.underOdd.toFixed(2)}</div>
-                                            </button>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-
-                        <!-- Goles de Jugador -->
-                        <div class="space-y-1.5">
-                            <div class="text-[11px] font-bold uppercase tracking-wider text-emerald-400">Goles por Jugador en el Partido</div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                                ${props.playersOdds.map(po => `
-                                    <div class="bg-[#282828] border border-[#3a3a3a] rounded px-2.5 py-1.5 flex items-center justify-between gap-2">
-                                        <div class="min-w-0">
-                                            <div class="text-xs font-bold text-white truncate">${escHtml(po.player.name)}</div>
-                                            <div class="text-[10px] text-neutral-400">${escHtml(po.team.code)} • ${po.goals} gol${po.goals === 1 ? '' : 'es'} en torneo</div>
-                                        </div>
-                                        <div class="flex items-center space-x-1.5 shrink-0">
-                                            <button onclick="selectMatchPropBet('${m.id}', ${isKnockout}, 'PLAYER_GOALS', 'PLAYER_OVER', '${po.player.id}', 0.5, ${po.odd1}, '${escHtml(po.player.name)} hace +0.5 goles', ${po.prob1}, ${props.isDynamic})" class="odd-btn ${isSel('PLAYER_GOALS', 'PLAYER_OVER', po.player.id, 0.5)} rounded px-2 py-1 text-center">
-                                                <div class="text-[9px] opacity-75">+0.5</div>
-                                                <div class="odd-val text-xs">${po.odd1.toFixed(2)}</div>
-                                            </button>
-                                            <button onclick="selectMatchPropBet('${m.id}', ${isKnockout}, 'PLAYER_GOALS', 'PLAYER_OVER', '${po.player.id}', 1.5, ${po.odd2}, '${escHtml(po.player.name)} hace +1.5 goles', ${po.prob2}, ${props.isDynamic})" class="odd-btn ${isSel('PLAYER_GOALS', 'PLAYER_OVER', po.player.id, 1.5)} rounded px-2 py-1 text-center">
-                                                <div class="text-[9px] opacity-75">+1.5</div>
-                                                <div class="odd-val text-xs">${po.odd2.toFixed(2)}</div>
-                                            </button>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
+            const isSel = (pick) => isLegInSlip(m.id, '1X2', pick) ? 'is-active' : '';
 
             return `
                 <div class="p-3.5 hover:bg-[#2e2e2e] transition space-y-2">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <!-- Equipos -->
-                        <div class="flex-1 min-w-0 space-y-1.5">
+                        <!-- Equipos (Clic abre el Bet Builder estilo bet365) -->
+                        <div onclick="${!m.played ? `openBetBuilderModal('${m.id}', ${isKnockout})` : ''}" class="flex-1 min-w-0 space-y-1.5 ${!m.played ? 'cursor-pointer group' : ''}">
                             <div class="flex flex-wrap items-center gap-1.5 text-[10px] text-neutral-400">
                                 <span class="uppercase font-semibold">${escHtml(isKnockout ? m.stageName : m.groupName)}</span>
                                 ${m.played
@@ -1994,11 +2352,15 @@
                                     : `<span class="bg-amber-500/15 text-[#ffdf1b] font-bold px-1.5 py-0.2 rounded">${odds.isDynamic ? 'CUOTA DINÁMICA' : 'CUOTA x2'}</span>`
                                 }
                                 ${!m.played
-                                    ? `<button onclick="toggleMatchProps('${m.id}')" class="bg-[#383838] hover:bg-[#4a4a4a] text-emerald-300 border border-emerald-500/30 font-bold px-2 py-0.2 rounded transition">${isExpanded ? '▲ Ocultar +Goles/Jugadores' : '▼ +Goles y Jugadores'}</button>`
+                                    ? `<span class="bg-[#027b5b]/30 group-hover:bg-[#027b5b] text-emerald-300 group-hover:text-white border border-emerald-500/40 font-bold px-2 py-0.2 rounded transition">+ Crear Apuesta (Bet Builder) &rsaquo;</span>`
+                                    : ''
+                                }
+                                ${matchLegsCount > 0
+                                    ? `<span class="bg-[#ffdf1b] text-[#111] font-extrabold px-1.5 py-0.2 rounded">${matchLegsCount} en boleto</span>`
                                     : ''
                                 }
                                 ${!m.played && matchOpenBets.length > 0
-                                    ? `<button onclick="switchView('view-market')" class="bg-[#027b5b] text-white font-bold px-1.5 py-0.2 rounded hover:bg-emerald-600">${matchOpenBets.length} desafío${matchOpenBets.length > 1 ? 's' : ''}</button>`
+                                    ? `<button onclick="event.stopPropagation(); switchView('view-market')" class="bg-[#027b5b] text-white font-bold px-1.5 py-0.2 rounded hover:bg-emerald-600">${matchOpenBets.length} desafío${matchOpenBets.length > 1 ? 's' : ''}</button>`
                                     : ''
                                 }
                             </div>
@@ -2007,7 +2369,7 @@
                             <div class="flex items-center justify-between pr-2">
                                 <div class="flex items-center space-x-2 min-w-0">
                                     ${flagMarkup(home)}
-                                    <span class="text-sm font-bold text-white truncate">${escHtml(home.name)}</span>
+                                    <span class="text-sm font-bold text-white group-hover:text-[#ffdf1b] transition truncate">${escHtml(home.name)}</span>
                                     ${hPos ? `<span class="text-[10px] text-neutral-400 font-semibold">${hPos}°</span>` : ''}
                                 </div>
                                 ${m.played ? `<span class="font-sport text-xl font-bold ${m.homeScore > m.awayScore ? 'text-[#ffdf1b]' : 'text-neutral-300'}">${m.homeScore}</span>` : ''}
@@ -2017,27 +2379,27 @@
                             <div class="flex items-center justify-between pr-2">
                                 <div class="flex items-center space-x-2 min-w-0">
                                     ${flagMarkup(away)}
-                                    <span class="text-sm font-bold text-white truncate">${escHtml(away.name)}</span>
+                                    <span class="text-sm font-bold text-white group-hover:text-[#ffdf1b] transition truncate">${escHtml(away.name)}</span>
                                     ${aPos ? `<span class="text-[10px] text-neutral-400 font-semibold">${aPos}°</span>` : ''}
                                 </div>
                                 ${m.played ? `<span class="font-sport text-xl font-bold ${m.awayScore > m.homeScore ? 'text-[#ffdf1b]' : 'text-neutral-300'}">${m.awayScore}</span>` : ''}
                             </div>
                         </div>
 
-                        <!-- Botones de Cuotas (1 - X - 2) -->
+                        <!-- Botones rápidos de Cuotas (1 - X - 2) -->
                         ${!m.played ? `
                             <div class="grid ${isKnockout ? 'grid-cols-2' : 'grid-cols-3'} gap-2 sm:w-60 shrink-0">
-                                <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'HOME')" class="odd-btn ${isSel('1X2', 'HOME')} rounded py-2 px-2 flex flex-col items-center justify-center">
+                                <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'HOME')" class="odd-btn ${isSel('HOME')} rounded py-2 px-2 flex flex-col items-center justify-center">
                                     <span class="text-[10px] opacity-75 font-semibold">${escHtml(home.code)}</span>
                                     <span class="odd-val text-sm">${odds.home.toFixed(2)}</span>
                                 </button>
                                 ${!isKnockout ? `
-                                    <button onclick="selectBetOutcome('${m.id}', false, 'DRAW')" class="odd-btn ${isSel('1X2', 'DRAW')} rounded py-2 px-2 flex flex-col items-center justify-center">
+                                    <button onclick="selectBetOutcome('${m.id}', false, 'DRAW')" class="odd-btn ${isSel('DRAW')} rounded py-2 px-2 flex flex-col items-center justify-center">
                                         <span class="text-[10px] opacity-75 font-semibold">EMP</span>
                                         <span class="odd-val text-sm">${odds.draw.toFixed(2)}</span>
                                     </button>
                                 ` : ''}
-                                <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'AWAY')" class="odd-btn ${isSel('1X2', 'AWAY')} rounded py-2 px-2 flex flex-col items-center justify-center">
+                                <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'AWAY')" class="odd-btn ${isSel('AWAY')} rounded py-2 px-2 flex flex-col items-center justify-center">
                                     <span class="text-[10px] opacity-75 font-semibold">${escHtml(away.code)}</span>
                                     <span class="odd-val text-sm">${odds.away.toFixed(2)}</span>
                                 </button>
@@ -2049,7 +2411,6 @@
                             </div>
                         `}
                     </div>
-                    ${propsPanelHtml}
                 </div>
             `;
         }
