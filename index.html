@@ -1945,6 +1945,25 @@
             updateSlipCalc();
         }
 
+        function openMobileSlipDrawer() {
+            const drawer = document.getElementById('mobile-slip-drawer');
+            const slot = document.getElementById('mobile-slip-slot');
+            const card = document.getElementById('bet-slip-card');
+            if (!drawer || !slot || !card) return;
+            slot.appendChild(card);
+            drawer.classList.remove('hidden');
+        }
+
+        function closeMobileSlipDrawer() {
+            const drawer = document.getElementById('mobile-slip-drawer');
+            const desktopContainer = document.getElementById('desktop-slip-container');
+            const card = document.getElementById('bet-slip-card');
+            if (desktopContainer && card && card.parentElement !== desktopContainer) {
+                desktopContainer.insertBefore(card, desktopContainer.firstChild);
+            }
+            if (drawer) drawer.classList.add('hidden');
+        }
+
         function renderRivalSelector() {
             const sel = document.getElementById('slip-rival-select');
             if (!sel) return;
