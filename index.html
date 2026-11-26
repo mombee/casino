@@ -254,7 +254,7 @@
     </div>
 
     <!-- CONTENIDO PRINCIPAL -->
-    <main class="flex-grow max-w-7xl w-full mx-auto px-3 sm:px-4 pt-4 pb-36 md:py-6">
+    <main class="flex-grow max-w-7xl w-full mx-auto px-3 sm:px-4 pt-4 pb-48 md:py-6">
 
         <!-- Toast de notificaciones -->
         <div id="toast" class="fixed top-16 md:top-auto md:bottom-5 left-3 right-3 md:left-auto md:right-5 z-50 hidden bg-[#111] text-white px-4 py-3 rounded-lg shadow-2xl border-l-4 border-[#ffdf1b] text-xs sm:text-sm font-medium md:max-w-sm">
@@ -310,7 +310,7 @@
 
                 <!-- Columna Derecha (Desktop): Boleto de Apuesta 1v1 -->
                 <aside id="desktop-slip-container" class="hidden lg:block lg:col-span-4 lg:sticky lg:top-28 space-y-4">
-                    <div id="bet-slip-card" class="bg-[#282828] border border-[#3d3d3d] rounded-lg overflow-hidden shadow-xl">
+                    <div id="bet-slip-card" class="bg-[#282828] border border-[#3d3d3d] rounded-lg lg:overflow-hidden shadow-xl">
                         <div class="bg-[#027b5b] px-4 py-3 flex items-center justify-between">
                             <div class="flex items-center space-x-2">
                                 <h2 class="text-sm font-bold text-white uppercase tracking-wider">Boleto Desafío 1v1</h2>
@@ -352,6 +352,8 @@
                                 </select>
                             </div>
 
+                            <!-- DESKTOP: monto + desglose + enviar -->
+                            <div class="hidden lg:block space-y-3.5">
                             <!-- Monto -->
                             <div class="space-y-2">
                                 <div class="flex justify-between text-xs">
@@ -386,6 +388,26 @@
                             <button onclick="placeP2PBet()" class="w-full bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] font-extrabold text-sm py-3 rounded shadow transition">
                                 Enviar Desafío 1v1
                             </button>
+                            </div>
+
+                            <!-- MOBILE (estilo bet365): Set Stake / Place Bet -->
+                            <div class="lg:hidden -mx-4 -mb-4 sticky bottom-0 z-10">
+                                <div class="m-bar">
+                                    <div class="m-keypad hidden bg-[#1f1f1f] border-t border-[#3a3a3a] p-3 space-y-2">
+                                        <div class="flex justify-between text-[11px] text-neutral-400">
+                                            <span>Disponible: <strong class="m-avail text-white">$0</strong></span>
+                                            <span>Rival pone <strong class="m-counter text-neutral-200">$0</strong> · Ganás <strong class="m-net text-[#00e676]">+$0</strong></span>
+                                        </div>
+                                        <div class="grid grid-cols-4 gap-1.5"><button type="button" onclick="mStakeQuick(50)" class="bg-[#383838] active:bg-[#4a4a4a] text-xs font-semibold py-2 rounded text-neutral-200">$50</button><button type="button" onclick="mStakeQuick(100)" class="bg-[#383838] active:bg-[#4a4a4a] text-xs font-semibold py-2 rounded text-neutral-200">$100</button><button type="button" onclick="mStakeQuick(250)" class="bg-[#383838] active:bg-[#4a4a4a] text-xs font-semibold py-2 rounded text-neutral-200">$250</button><button type="button" onclick="mStakeQuick(500)" class="bg-[#383838] active:bg-[#4a4a4a] text-xs font-semibold py-2 rounded text-neutral-200">$500</button></div>
+                                        <div class="grid grid-cols-3 gap-1.5"><button type="button" onclick="mStakeKey('1')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">1</button><button type="button" onclick="mStakeKey('2')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">2</button><button type="button" onclick="mStakeKey('3')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">3</button><button type="button" onclick="mStakeKey('4')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">4</button><button type="button" onclick="mStakeKey('5')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">5</button><button type="button" onclick="mStakeKey('6')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">6</button><button type="button" onclick="mStakeKey('7')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">7</button><button type="button" onclick="mStakeKey('8')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">8</button><button type="button" onclick="mStakeKey('9')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">9</button><button type="button" onclick="mStakeKey('00')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">00</button><button type="button" onclick="mStakeKey('0')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">0</button><button type="button" onclick="mStakeKey('back')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">⌫</button></div>
+                                        <button type="button" onclick="mCloseKeypads()" class="w-full bg-[#00e676] text-[#111] font-extrabold text-sm py-2.5 rounded">Listo</button>
+                                    </div>
+                                    <div class="flex">
+                                        <button type="button" onclick="mToggleKeypad(this)" class="m-stake-btn w-1/2 bg-[#1a1a1a] text-[#00e676] font-extrabold text-base py-3.5 border-t border-[#333] leading-tight"><span class="m-stake-label">Set Stake</span></button>
+                                        <button type="button" onclick="mobilePlaceBet()" class="m-place-btn w-1/2 bg-[#4a4a4a] text-white font-extrabold text-base py-3.5 border-t border-[#4a4a4a] transition-colors">Place Bet</button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -608,8 +630,8 @@
          BARRA FLOTANTE DE BOLETO Y NAVEGACIÓN MÓVIL
     =========================================== -->
     <!-- Píldora flotante del boleto en celular cuando hay selecciones cargadas -->
-    <div id="mobile-slip-bar" class="lg:hidden fixed bottom-14 inset-x-0 z-30 px-3 pb-2 hidden">
-        <button onclick="openMobileSlipDrawer()" class="w-full bg-[#027b5b] border-2 border-[#ffdf1b] text-white rounded-xl px-4 py-2.5 shadow-2xl flex items-center justify-between">
+    <div id="mobile-slip-bar" class="lg:hidden fixed bottom-14 inset-x-0 z-30 hidden shadow-[0_-6px_18px_rgba(0,0,0,.5)]">
+        <button onclick="openMobileSlipDrawer()" class="w-full bg-[#027b5b] border-t-2 border-[#ffdf1b] text-white px-4 py-2.5 flex items-center justify-between">
             <div class="flex items-center space-x-2.5 min-w-0">
                 <span id="mobile-slip-count" class="bg-[#ffdf1b] text-[#111] font-extrabold text-xs w-6 h-6 rounded-full flex items-center justify-center shrink-0">1</span>
                 <div class="text-left min-w-0">
@@ -622,6 +644,21 @@
                 <div id="mobile-slip-odd" class="text-base font-extrabold text-[#ffdf1b] leading-none">2.00</div>
             </div>
         </button>
+        <div class="m-bar">
+            <div class="m-keypad hidden bg-[#1f1f1f] border-t border-[#3a3a3a] p-3 space-y-2">
+                <div class="flex justify-between text-[11px] text-neutral-400">
+                    <span>Disponible: <strong class="m-avail text-white">$0</strong></span>
+                    <span>Rival pone <strong class="m-counter text-neutral-200">$0</strong> · Ganás <strong class="m-net text-[#00e676]">+$0</strong></span>
+                </div>
+                <div class="grid grid-cols-4 gap-1.5"><button type="button" onclick="mStakeQuick(50)" class="bg-[#383838] active:bg-[#4a4a4a] text-xs font-semibold py-2 rounded text-neutral-200">$50</button><button type="button" onclick="mStakeQuick(100)" class="bg-[#383838] active:bg-[#4a4a4a] text-xs font-semibold py-2 rounded text-neutral-200">$100</button><button type="button" onclick="mStakeQuick(250)" class="bg-[#383838] active:bg-[#4a4a4a] text-xs font-semibold py-2 rounded text-neutral-200">$250</button><button type="button" onclick="mStakeQuick(500)" class="bg-[#383838] active:bg-[#4a4a4a] text-xs font-semibold py-2 rounded text-neutral-200">$500</button></div>
+                <div class="grid grid-cols-3 gap-1.5"><button type="button" onclick="mStakeKey('1')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">1</button><button type="button" onclick="mStakeKey('2')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">2</button><button type="button" onclick="mStakeKey('3')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">3</button><button type="button" onclick="mStakeKey('4')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">4</button><button type="button" onclick="mStakeKey('5')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">5</button><button type="button" onclick="mStakeKey('6')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">6</button><button type="button" onclick="mStakeKey('7')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">7</button><button type="button" onclick="mStakeKey('8')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">8</button><button type="button" onclick="mStakeKey('9')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">9</button><button type="button" onclick="mStakeKey('00')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">00</button><button type="button" onclick="mStakeKey('0')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">0</button><button type="button" onclick="mStakeKey('back')" class="bg-[#333] active:bg-[#4a4a4a] text-lg font-bold py-2.5 rounded text-white">⌫</button></div>
+                <button type="button" onclick="mCloseKeypads()" class="w-full bg-[#00e676] text-[#111] font-extrabold text-sm py-2.5 rounded">Listo</button>
+            </div>
+            <div class="flex">
+                <button type="button" onclick="mToggleKeypad(this)" class="m-stake-btn w-1/2 bg-[#1a1a1a] text-[#00e676] font-extrabold text-base py-3.5 border-t border-[#333] leading-tight"><span class="m-stake-label">Set Stake</span></button>
+                <button type="button" onclick="mobilePlaceBet()" class="m-place-btn w-1/2 bg-[#4a4a4a] text-white font-extrabold text-base py-3.5 border-t border-[#4a4a4a] transition-colors">Place Bet</button>
+            </div>
+        </div>
     </div>
 
     <!-- Drawer modal del boleto en celular -->
@@ -2053,15 +2090,61 @@
 
         function clearBetSlip() {
             activeSlipLegs = [];
+            mStakeStr = ''; mStakeTouched = false;
+            document.getElementById('slip-stake').value = 100;
+            document.querySelectorAll('.m-keypad').forEach(k => k.classList.add('hidden'));
             renderBetSlip();
             renderMatches();
             renderKnockout();
             if (activeBuilderMatchId) renderBetBuilderModal();
         }
 
+        let mStakeStr = '';
+        let mStakeTouched = false;
         function setQuickStake(amount) {
             document.getElementById('slip-stake').value = amount;
             updateSlipCalc();
+        }
+        function mApplyStake() {
+            mStakeTouched = true;
+            document.getElementById('slip-stake').value = mStakeStr === '' ? 0 : Number(mStakeStr);
+            updateSlipCalc();
+        }
+        function mStakeKey(k) {
+            if (k === 'back') mStakeStr = mStakeStr.slice(0, -1);
+            else mStakeStr = (mStakeStr + k).replace(/^0+/, '').slice(0, 7);
+            mApplyStake();
+        }
+        function mStakeQuick(a) { mStakeStr = String(a); mApplyStake(); }
+        function mCloseKeypads() {
+            document.querySelectorAll('.m-keypad').forEach(k => k.classList.add('hidden'));
+            updateSlipCalc();
+        }
+        function mToggleKeypad(btn) {
+            const kp = btn.closest('.m-bar').querySelector('.m-keypad');
+            const willOpen = kp.classList.contains('hidden');
+            mCloseKeypads();
+            if (willOpen) { kp.classList.remove('hidden'); if (!mStakeTouched) { mStakeTouched = true; mApplyStake(); } }
+            updateSlipCalc();
+        }
+        function mIsReady() {
+            const rival = document.getElementById('slip-rival-select').value;
+            const stake = Number(document.getElementById('slip-stake').value) || 0;
+            return !!rival && mStakeTouched && stake >= 10;
+        }
+        function mobilePlaceBet() {
+            if (!mIsReady()) {
+                const drawer = document.getElementById('mobile-slip-drawer');
+                const drawerClosed = drawer.classList.contains('hidden');
+                if (!document.getElementById('slip-rival-select').value) {
+                    if (drawerClosed) openMobileSlipDrawer();
+                    showToast('Elegí a quién le mandás el desafío 1v1.');
+                } else {
+                    showToast('Tocá "Set Stake" y poné un monto (mínimo $10).');
+                }
+                return;
+            }
+            placeP2PBet();
         }
 
         function openMobileSlipDrawer() {
@@ -2069,6 +2152,7 @@
             const slot = document.getElementById('mobile-slip-slot');
             const card = document.getElementById('bet-slip-card');
             if (!drawer || !slot || !card) return;
+            mCloseKeypads();
             slot.appendChild(card);
             drawer.classList.remove('hidden');
         }
@@ -2177,6 +2261,25 @@
             document.getElementById('slip-counter-stake').textContent = formatMoney(counterStake);
             document.getElementById('slip-total-pot').textContent = formatMoney(stake + counterStake);
             document.getElementById('slip-net-profit').textContent = '+' + formatMoney(counterStake);
+
+            // Versión celular (Set Stake / Place Bet)
+            const fill = (cls, t) => document.querySelectorAll(cls).forEach(el => el.textContent = t);
+            fill('.m-avail', formatMoney(u ? u.balance : 0));
+            fill('.m-counter', formatMoney(counterStake));
+            fill('.m-net', '+' + formatMoney(counterStake));
+            const open = Array.from(document.querySelectorAll('.m-keypad')).some(k => !k.classList.contains('hidden'));
+            document.querySelectorAll('.m-stake-label').forEach(el => {
+                el.innerHTML = mStakeStr !== ''
+                    ? `<span class="block text-[9px] uppercase text-neutral-400 font-bold">Tu apuesta</span><span class="text-white">${formatMoney(Number(mStakeStr))}${open ? '<span class="text-[#00e676] animate-pulse">|</span>' : ''}</span>`
+                    : (open ? '<span class="text-[#00e676] animate-pulse">|</span>' : 'Set Stake');
+            });
+            const ready = mIsReady();
+            document.querySelectorAll('.m-place-btn').forEach(b => {
+                b.classList.toggle('bg-[#0a9d65]', ready);
+                b.classList.toggle('bg-[#4a4a4a]', !ready);
+                b.classList.toggle('border-[#0a9d65]', ready);
+                b.classList.toggle('border-[#4a4a4a]', !ready);
+            });
         }
 
         async function placeP2PBet() {
