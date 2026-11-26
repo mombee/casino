@@ -116,45 +116,6 @@
         .mobile-nav-btn.is-active {
             color: var(--b365-yellow);
         }
-        .odd-btn:hover:not(:disabled) {
-            background-color: #4a4a4a;
-            border-color: var(--b365-yellow);
-        }
-        .odd-btn.is-active {
-            background-color: #e5e5e5;
-            color: #141414;
-            border-color: #ffffff;
-        }
-        .odd-btn.is-active .odd-val {
-            color: #005440;
-        }
-        .odd-val {
-            color: var(--b365-yellow);
-            font-weight: 700;
-        }
-
-        /* Tabs activos */
-        .nav-tab {
-            position: relative;
-            color: #b5b5b5;
-            transition: color 0.15s ease;
-        }
-        .nav-tab:hover {
-            color: #ffffff;
-        }
-        .nav-tab.is-active {
-            color: var(--b365-yellow);
-            font-weight: 700;
-        }
-        .nav-tab.is-active::after {
-            content: '';
-            position: absolute;
-            left: 0;
-            right: 0;
-            bottom: -1px;
-            height: 3px;
-            background-color: var(--b365-yellow);
-        }
 
         /* Forma reciente */
         .form-dot {
@@ -1238,7 +1199,32 @@
 
         const clampOdd = (val, min, max) => Number(Math.max(min, Math.min(max, val)).toFixed(2));
 
-        // Actualiza las cuotas de las selecciones que ya están en el boleto cuando cambia el marcador en vivo
+        // Genera una variación decimal determinística (ej. -0.35 a +0.35) por ID para que las cuotas iniciales tengan decimales realistas
+        function seededJitter(key, amplitude = 0.25) {
+            let h = 2166136261;
+            const str = String(key || 'seed');
+            for (let i = 0; i < str.length; i++) {
+                h ^= str.charCodeAt(i);
+                h = Math.imul(h, 16777619);
+            }
+            const norm = ((h >>> 0) % 10000) / 10000; // 0..0.9999
+            return (norm * 2 - 1) * amplitude;
+        }
+
+        // Calcula la fracción de tiempo restante del partido (1.00 = partido entero, 0.05 = últimos segundos)
+        function getMatchRemainingFraction(match) {
+            const totalSecs = Number(match.liveTotalSeconds) || 600;
+            if (typeof match.liveSecondsLeft === 'number') {
+                return Math.max(0.04, Math.min(1, match.liveSecondsLeft / totalSecs));
+            }
+            if (typeof match.liveMinute === 'number') {
+                const totalMins = Math.max(10, Math.round(totalSecs / 60));
+                return Math.max(0.04, Math.min(1, (totalMins - match.liveMinute) / totalMins));
+            }
+            return 1;
+        }
+
+        // Actualiza las cuotas de las selecciones que ya están en el boleto cuando cambia el marcador o el tiempo en vivo
         function syncSlipOddsWithLiveMatch() {
             if (!activeSlipLegs.length) return;
             const allMatches = [
@@ -1265,7 +1251,10 @@
                         if (found) leg.odd = leg.pick === 'OVER' ? found.overOdd : found.underOdd;
                     } else if (leg.marketType === 'PLAYER_GOALS') {
                         const po = p.playersOdds.find(x => x.player.id === leg.targetId);
-                        if (po) leg.odd = leg.line >= 1.5 ? po.odd2 : po.odd1;
+                        if (po) {
+                            const lineMap = { 0.5: po.odd1, 1.5: po.odd2, 2.5: po.odd3, 3.5: po.odd4 };
+                            leg.odd = lineMap[leg.line] || po.odd1;
+                        }
                     } else if (leg.marketType === 'MATCH_MVP') {
                         const po = p.playersOdds.find(x => x.player.id === leg.targetId);
                         if (po) leg.odd = po.oddMvp;
@@ -1276,9 +1265,10 @@
         }
 
         /**
-         * Calcula cuotas P2P justas (sin margen de la casa):
-         * - Usa historial desde el 1° partido jugado (si uno ganó 2 y otro perdió 2, ya ajusta fuerte)
-         * - Incorpora el marcador parcial en vivo (ej. si van 2-0, ajusta cuotas de 1X2 y Doble Op.)
+         * Calcula cuotas P2P realistas para 3v3 de muchos goles:
+         * - Incorpora historial del torneo + diferencia de goles en vivo + tiempo restante del partido.
+         * - Mientras menos tiempo falta para terminar el partido, más se consolidan las probabilidades
+         *   de quien va ganando (o del empate si van iguales) y más suben las cuotas de remontada.
          */
         function computeMatchOdds(match, isKnockout) {
             const statsMap = getAllTeamsStatsMap();
@@ -1288,80 +1278,112 @@
             const liveHome = Number(match.homeScore) || 0;
             const liveAway = Number(match.awayScore) || 0;
             const liveGoalsTotal = liveHome + liveAway;
-            const isLive = !match.played && Boolean(match.isLive || liveGoalsTotal > 0 || typeof match.liveSecondsLeft === 'number');
+            const remFrac = getMatchRemainingFraction(match);
+            const elapsedFrac = 1 - remFrac;
+            const isLive = !match.played && Boolean(match.isLive || liveGoalsTotal > 0 || remFrac < 0.99);
             const hasHistory = (h && h.pj >= 1) || (a && a.pj >= 1);
 
-            // Solo si ambos tienen 0 partidos jugados y el partido va 0-0 sin empezar, pago x2.00
+            // Antes de empezar el torneo (0 PJ y sin empezar), cuotas iniciales con ligera oscilación realista por partido
             if (!hasHistory && !isLive) {
+                const seedBase = `${match.id}_${match.homeId}_${match.awayId}`;
+                const tilt = seededJitter(seedBase + '_tilt', 0.22); // diferencia sutil entre local y visitante
+                if (isKnockout) {
+                    const homeOdd = clampOdd(1.94 + tilt, 1.68, 2.24);
+                    const awayOdd = clampOdd(1.94 - tilt, 1.68, 2.24);
+                    const pH = Math.round((1 / homeOdd) / ((1 / homeOdd) + (1 / awayOdd)) * 100);
+                    return {
+                        isDynamic: false,
+                        isLive: false,
+                        home: homeOdd,
+                        draw: null,
+                        away: awayOdd,
+                        probHome: pH,
+                        probDraw: 0,
+                        probAway: 100 - pH
+                    };
+                }
+                const drawJitter = seededJitter(seedBase + '_draw', 0.18);
+                const homeOdd = clampOdd(2.58 + tilt, 2.25, 2.95);
+                const awayOdd = clampOdd(2.62 - tilt, 2.25, 2.95);
+                const drawOdd = clampOdd(3.38 + drawJitter, 3.10, 3.70);
+                const invSum = (1 / homeOdd) + (1 / drawOdd) + (1 / awayOdd);
+                const pH = Math.round(((1 / homeOdd) / invSum) * 100);
+                const pD = Math.round(((1 / drawOdd) / invSum) * 100);
                 return {
                     isDynamic: false,
                     isLive: false,
-                    home: 2.00,
-                    draw: isKnockout ? null : 2.00,
-                    away: 2.00,
-                    probHome: isKnockout ? 50 : 33,
-                    probDraw: isKnockout ? 0 : 34,
-                    probAway: isKnockout ? 50 : 33
+                    home: homeOdd,
+                    draw: drawOdd,
+                    away: awayOdd,
+                    probHome: pH,
+                    probDraw: pD,
+                    probAway: Math.max(1, 100 - pH - pD)
                 };
             }
 
             const teamPower = (s) => {
                 if (!s || s.pj === 0) return 50;
-                const ppg = s.pts / s.pj; // 0..3
-                const gdpg = Math.max(-3.5, Math.min(3.5, s.dg / s.pj));
+                const ppg = s.pts / s.pj;
+                const gdpg = Math.max(-4.5, Math.min(4.5, s.dg / s.pj));
                 const recent = (s.form || []).slice(-3);
                 const formAvg = recent.length
                     ? recent.reduce((acc, r) => acc + (r === 'V' ? 1 : r === 'E' ? 0.5 : 0), 0) / recent.length
                     : 0.5;
-                // Peso extra a racha de victorias/derrotas seguidas (ej: 2 ganados vs 2 perdidos)
-                const streakBonus = (s.pg - s.pp) * 6.5;
-                return 50 + (ppg * 11) + (gdpg * 6.5) + ((formAvg - 0.5) * 18) + streakBonus;
+                const streakBonus = (s.pg - s.pp) * 6.0;
+                return 50 + (ppg * 10.5) + (gdpg * 5.8) + ((formAvg - 0.5) * 16) + streakBonus;
             };
 
-            let diff = teamPower(h) - teamPower(a);
+            // A medida que avanza el reloj, pesa menos la previa y pesa mucho más el marcador actual vs tiempo restante
+            let diff = (teamPower(h) - teamPower(a)) * (0.45 + 0.55 * remFrac);
 
-            // Ajuste fuerte por marcador parcial en vivo (cada gol de ventaja inclina fuertemente la probabilidad)
             const goalDiffLive = liveHome - liveAway;
-            const secsLeft = typeof match.liveSecondsLeft === 'number' ? match.liveSecondsLeft : 600;
-            const timeProgress = 1 + Math.max(0, Math.min(1, (600 - secsLeft) / 600)) * 0.7;
-            diff += goalDiffLive * 24 * timeProgress;
+            // Urgencia temporal: 1 gol de ventaja faltando 1 minuto vale mucho más que faltando 9 minutos
+            const timeMultiplier = 1 + Math.pow(elapsedFrac, 1.35) * 2.4;
+            diff += goalDiffLive * 21 * timeMultiplier;
 
-            const homeShare = 1 / (1 + Math.exp(-diff / 17));
+            const homeShare = 1 / (1 + Math.exp(-diff / 18));
 
             if (isKnockout) {
-                const pHome = Math.max(0.12, Math.min(0.88, homeShare));
+                const pHome = Math.max(0.06, Math.min(0.94, homeShare));
                 const pAway = 1 - pHome;
                 return {
                     isDynamic: true,
                     isLive,
-                    home: clampOdd(1 / pHome, 1.14, 7.50),
+                    home: clampOdd(1 / pHome, 1.06, 12.00),
                     draw: null,
-                    away: clampOdd(1 / pAway, 1.14, 7.50),
+                    away: clampOdd(1 / pAway, 1.06, 12.00),
                     probHome: Math.round(pHome * 100),
                     probDraw: 0,
                     probAway: Math.round(pAway * 100)
                 };
             }
 
-            // En fase regular existe el empate (baja mucho si ya hay 2+ goles de diferencia en vivo)
-            const baseDraw = goalDiffLive === 0 ? (isLive ? 0.28 : 0.24) : Math.max(0.08, 0.22 - Math.abs(goalDiffLive) * 0.065);
-            const pDraw = Math.max(0.08, baseDraw - Math.abs(diff) * 0.0014);
-            const pHome = (1 - pDraw) * homeShare;
-            const pAway = (1 - pDraw) * (1 - homeShare);
+            // En fase regular: si van empatados y falta poco, la chance de empate sube; si hay diferencia y falta poco, el empate se desploma
+            let pDraw;
+            if (goalDiffLive === 0) {
+                const baseDraw = isLive ? (0.24 + elapsedFrac * 0.34) : 0.23;
+                pDraw = Math.max(0.10, Math.min(0.62, baseDraw - Math.abs(diff) * 0.0012));
+            } else {
+                const drawDecay = Math.max(0.04, 0.22 * remFrac - (Math.abs(goalDiffLive) - 1) * 0.06);
+                pDraw = Math.max(0.04, drawDecay);
+            }
+
+            const pHome = Math.max(0.04, (1 - pDraw) * homeShare);
+            const pAway = Math.max(0.04, (1 - pDraw) * (1 - homeShare));
 
             return {
                 isDynamic: true,
                 isLive,
-                home: clampOdd(1 / pHome, 1.15, 7.50),
-                draw: clampOdd(1 / pDraw, 1.90, 6.50),
-                away: clampOdd(1 / pAway, 1.15, 7.50),
+                home: clampOdd(1 / pHome, 1.06, 14.00),
+                draw: clampOdd(1 / pDraw, 1.45, 12.00),
+                away: clampOdd(1 / pAway, 1.06, 14.00),
                 probHome: Math.round(pHome * 100),
                 probDraw: Math.round(pDraw * 100),
                 probAway: Math.round(pAway * 100)
             };
         }
 
-        // Cuotas de Total de Goles (Over/Under) y Goles por Jugador en un partido (incluye estado en vivo)
+        // Cuotas de Total de Goles y Goles por Jugador (+0.5, +1.5, +2.5, +3.5) calibradas para partidos de muchos goles y tiempo restante
         function computeMatchPropOdds(match) {
             const statsMap = getAllTeamsStatsMap();
             const pMap = getPlayerStatsMap();
@@ -1369,19 +1391,19 @@
             const a = statsMap[match.awayId];
 
             const liveGoalsNow = (Number(match.homeScore) || 0) + (Number(match.awayScore) || 0);
-            const secsLeft = typeof match.liveSecondsLeft === 'number' ? match.liveSecondsLeft : 600;
-            const remainingFraction = Math.max(0.15, Math.min(1, secsLeft / 600));
+            const remFrac = getMatchRemainingFraction(match);
             const hasHistory = (h && h.pj >= 1) || (a && a.pj >= 1);
-            const isLive = !match.played && Boolean(match.isLive || liveGoalsNow > 0 || typeof match.liveSecondsLeft === 'number');
+            const isLive = !match.played && Boolean(match.isLive || liveGoalsNow > 0 || remFrac < 0.99);
 
-            const avgGoalsTeam = (s) => (s && s.pj > 0 ? (s.gf + s.gc) / s.pj : 4.2);
+            // En fútbol 3v3 se hacen bastantes goles (promedio base ~5.6 goles por partido)
+            const avgGoalsTeam = (s) => (s && s.pj > 0 ? Math.max(2.5, (s.gf + s.gc) / s.pj) : 5.6);
             const fullMatchExpected = (avgGoalsTeam(h) + avgGoalsTeam(a)) / 2;
 
-            // Goles esperados restantes a partir del marcador actual
-            const remainingExpected = fullMatchExpected * remainingFraction;
+            // Goles esperados en el tiempo que queda de partido
+            const remainingExpected = fullMatchExpected * remFrac;
             const totalExpected = liveGoalsNow + remainingExpected;
 
-            // Distribución de Poisson para calcular probabilidad de superar N goles restantes
+            // Distribución de Poisson exacta para probabilidad acumulada P(X <= k)
             const poissonCdf = (lambda, k) => {
                 if (k < 0) return 0;
                 let sum = 0, term = Math.exp(-lambda);
@@ -1389,24 +1411,21 @@
                     if (i > 0) term *= lambda / i;
                     sum += term;
                 }
-                return Math.min(0.96, Math.max(0.04, sum));
+                return Math.min(0.97, Math.max(0.03, sum));
             };
 
-            const lines = [2.5, 3.5, 4.5].map(line => {
-                if (!hasHistory && !isLive) {
-                    return { line, overOdd: 2.00, underOdd: 2.00, probOver: 50, alreadyHit: false };
-                }
-                // Si ya superaron la línea en vivo (ej. van 3 goles y la línea es 2.5)
+            // Líneas de goles del partido adaptadas a partidos de muchos goles (3.5, 4.5, 5.5, 6.5)
+            const lines = [3.5, 4.5, 5.5, 6.5].map(line => {
                 if (liveGoalsNow > line) {
-                    return { line, overOdd: 1.05, underOdd: 9.50, probOver: 96, alreadyHit: true };
+                    return { line, overOdd: 1.03, underOdd: 15.00, probOver: 97, alreadyHit: true };
                 }
                 const goalsNeeded = Math.floor(line) - liveGoalsNow;
                 const pUnder = poissonCdf(remainingExpected, goalsNeeded);
                 const pOver = 1 - pUnder;
                 return {
                     line,
-                    overOdd: clampOdd(1 / pOver, 1.14, 6.50),
-                    underOdd: clampOdd(1 / pUnder, 1.14, 6.50),
+                    overOdd: clampOdd(1 / pOver, 1.07, 11.00),
+                    underOdd: clampOdd(1 / pUnder, 1.07, 11.00),
                     probOver: Math.round(pOver * 100),
                     alreadyHit: false
                 };
@@ -1422,46 +1441,75 @@
             const playersOdds = matchPlayers.map(p => {
                 const st = pMap[p.id];
                 const livePlayerGoals = (match.goals && match.goals[p.id]) || 0;
-
-                if ((!st || st.pj < 1) && !isLive) {
-                    return { player: p, team: p.team, goals: st?.goals || 0, mvps: st?.mvps || 0, odd1: 2.00, odd2: 2.00, oddMvp: 2.00, prob1: 50, prob2: 50, probMvp: 17 };
-                }
-                const baseGpg = st && st.pj > 0 ? Math.max(0.18, Math.min(2.8, st.goals / st.pj)) : 0.65;
-                const remGpg = baseGpg * remainingFraction;
-                const pZero = Math.exp(-remGpg);
-                const pOne = remGpg * pZero;
-
-                const prob1 = livePlayerGoals >= 1 ? 0.95 : Math.max(0.15, Math.min(0.88, 1 - pZero));
-                const prob2 = livePlayerGoals >= 2 ? 0.95 : (livePlayerGoals === 1 ? Math.max(0.15, Math.min(0.85, 1 - pZero)) : Math.max(0.08, Math.min(0.75, 1 - (pZero + pOne))));
-
                 const pjCount = st ? st.pj : 0;
-                const mvpBase = (st ? st.mvps + 0.5 : 0.5) / (pjCount + 3);
-                const mvpLiveBoost = livePlayerGoals * 0.14;
-                const mvpRate = Math.max(0.08, Math.min(0.72, mvpBase + mvpLiveBoost));
+
+                // Cuotas iniciales con decimales variados:
+                // +0.5 goles: 1.40 - 1.70 | +1.5 goles: 1.90 - 2.10 | +2.5 goles: 2.50 - 3.00 | +3.5 goles: ~4.00
+                const j1 = seededJitter(p.id + '_g1', 0.15); // 1.40 .. 1.70 (centro 1.55)
+                const j2 = seededJitter(p.id + '_g2', 0.10); // 1.90 .. 2.10 (centro 2.00)
+                const j3 = seededJitter(p.id + '_g3', 0.25); // 2.50 .. 3.00 (centro 2.75)
+                const j4 = seededJitter(p.id + '_g4', 0.18); // ~3.82 .. 4.18 (centro 4.00)
+
+                const baseOdd1 = 1.55 + j1;
+                const baseOdd2 = 2.00 + j2;
+                const baseOdd3 = 2.75 + j3;
+                const baseOdd4 = 4.00 + j4;
+
+                // Factor de forma partido a partido: si viene metiendo goles, baja su cuota; si no mete, sube gradualmente
+                const gpg = pjCount > 0 ? st.goals / pjCount : 0.95;
+                const formRatio = pjCount > 0
+                    ? Math.max(0.62, Math.min(1.55, 1 / (0.68 + gpg * 0.34)))
+                    : 1.0;
+
+                // Ajuste por tiempo restante en vivo y goles ya convertidos en el partido actual
+                const timePressure = 1 + (1 - remFrac) * 1.15;
+
+                const adjustPlayerLine = (baseOdd, lineTarget) => {
+                    const needed = lineTarget - livePlayerGoals;
+                    if (needed <= 0) return 1.04;
+                    // Si ya metió goles en este partido, las líneas siguientes bajan de cuota
+                    const progressDiscount = livePlayerGoals > 0 ? Math.pow(0.74, livePlayerGoals) : 1;
+                    const raw = baseOdd * formRatio * progressDiscount * (livePlayerGoals >= lineTarget - 1 ? 1 : timePressure);
+                    return Number(raw.toFixed(2));
+                };
+
+                const odd1 = clampOdd(adjustPlayerLine(baseOdd1, 1), 1.04, 3.20);
+                const odd2 = clampOdd(adjustPlayerLine(baseOdd2, 2), 1.06, 4.80);
+                const odd3 = clampOdd(adjustPlayerLine(baseOdd3, 3), 1.10, 7.20);
+                const odd4 = clampOdd(adjustPlayerLine(baseOdd4, 4), 1.15, 11.50);
+
+                const mvpBase = (st ? st.mvps + 0.6 : 0.6) / (pjCount + 3.6);
+                const mvpLiveBoost = livePlayerGoals * (0.11 + (1 - remFrac) * 0.08);
+                const mvpRate = Math.max(0.07, Math.min(0.80, mvpBase + mvpLiveBoost));
 
                 return {
                     player: p,
                     team: p.team,
                     goals: (st?.goals || 0) + livePlayerGoals,
+                    liveGoals: livePlayerGoals,
                     mvps: st?.mvps || 0,
-                    odd1: clampOdd(1 / prob1, 1.06, 5.50),
-                    odd2: clampOdd(1 / prob2, 1.08, 7.50),
-                    oddMvp: clampOdd(1 / mvpRate, 1.35, 7.00),
-                    prob1: Math.round(prob1 * 100),
-                    prob2: Math.round(prob2 * 100),
+                    odd1,
+                    odd2,
+                    odd3,
+                    odd4,
+                    oddMvp: clampOdd(1 / mvpRate + seededJitter(p.id + '_mvp', 0.14), 1.25, 8.50),
+                    prob1: Math.round((1 / odd1) * 100),
+                    prob2: Math.round((1 / odd2) * 100),
+                    prob3: Math.round((1 / odd3) * 100),
+                    prob4: Math.round((1 / odd4) * 100),
                     probMvp: Math.round(mvpRate * 100)
                 };
             });
 
             // Doble Oportunidad (solo fase regular donde existe empate)
             const base = computeMatchOdds(match, false);
-            const p1X = Math.min(0.94, Math.max(0.12, (base.probHome + base.probDraw) / 100));
-            const pX2 = Math.min(0.94, Math.max(0.12, (base.probDraw + base.probAway) / 100));
-            const p12 = Math.min(0.95, Math.max(0.20, (base.probHome + base.probAway) / 100));
+            const p1X = Math.min(0.95, Math.max(0.10, (base.probHome + base.probDraw) / 100));
+            const pX2 = Math.min(0.95, Math.max(0.10, (base.probDraw + base.probAway) / 100));
+            const p12 = Math.min(0.96, Math.max(0.25, (base.probHome + base.probAway) / 100));
             const doubleChance = {
-                odd1X: !base.isDynamic ? 2.00 : clampOdd(1 / p1X, 1.08, 4.50),
-                oddX2: !base.isDynamic ? 2.00 : clampOdd(1 / pX2, 1.08, 4.50),
-                odd12: !base.isDynamic ? 2.00 : clampOdd(1 / p12, 1.08, 3.60),
+                odd1X: clampOdd(1 / p1X, 1.05, 6.50),
+                oddX2: clampOdd(1 / pX2, 1.05, 6.50),
+                odd12: clampOdd(1 / p12, 1.05, 4.50),
                 prob1X: Math.round(p1X * 100),
                 probX2: Math.round(pX2 * 100),
                 prob12: Math.round(p12 * 100)
@@ -1470,77 +1518,98 @@
             return { isDynamic: hasHistory || isLive, expectedGoals: totalExpected.toFixed(1), lines, playersOdds, doubleChance };
         }
 
-        // Cuotas para Apuestas Especiales del Torneo (tope x5 para grupos y x10 para campeón/goleador/MVP)
+        // Cuotas para Apuestas Especiales del Torneo (incluye TODOS los jugadores y cuotas iniciales con decimales variados)
         function computeTournamentSpecials() {
             const statsMap = getAllTeamsStatsMap();
             const pMap = getPlayerStatsMap();
             const teams = tournamentState.teams || [];
             const anyPlayed = tournamentState.matches.some(m => m.played);
 
-            // 1. Campeón del Torneo (tope x10.00)
-            const teamScores = teams.map(t => {
+            // 1. Campeón del Torneo (cuotas iniciales ~8.50 - 10.60 con decimales por azar y actualización por resultados)
+            const teamScores = teams.map((t) => {
                 const s = statsMap[t.id];
-                if (!s || s.pj === 0) return { team: t, score: 10, label: 'Sin partidos' };
+                if (!s || s.pj === 0) {
+                    const jitter = seededJitter('champ_' + t.id, 0.9);
+                    const score = Math.max(6.5, 9.5 + jitter);
+                    return { team: t, score, label: '0 PJ • Fase inicial', hasPlayed: false };
+                }
                 const ppg = s.pts / s.pj;
-                const score = Math.max(3, 10 + (ppg * 12) + (s.dg * 2.2));
-                return { team: t, score, label: `${s.pts} pts • ${s.pj} PJ` };
+                const score = Math.max(2.5, 8 + (ppg * 12) + (s.dg * 2.0));
+                return { team: t, score, label: `${s.pts} pts • ${s.pj} PJ`, hasPlayed: true };
             });
             const totalTeamScore = teamScores.reduce((acc, x) => acc + x.score, 0) || 1;
             const championOptions = teamScores.map(x => {
                 const prob = x.score / totalTeamScore;
+                const rawOdd = !x.hasPlayed
+                    ? 9.85 + seededJitter('champ_odd_' + x.team.id, 0.45)
+                    : (1 / prob) + seededJitter('champ_live_' + x.team.id, 0.12);
                 return {
                     targetId: x.team.id,
                     name: x.team.name,
                     sub: x.label,
                     team: x.team,
-                    odd: !anyPlayed ? 2.00 : clampOdd(1 / prob, 1.35, 10.00),
+                    odd: clampOdd(rawOdd, 1.35, 11.50),
                     prob: Math.round(prob * 100)
                 };
             }).sort((a, b) => a.odd - b.odd);
 
-            // 2. Máximo Goleador (Bota de Oro, tope x10.00)
+            // 2. Máximo Goleador (Bota de Oro - TODOS los jugadores del torneo, iniciales ~9.40 - 10.65 con decimales)
             const allPlayers = Object.values(pMap);
-            const scorerWeights = allPlayers.map(st => {
+            const scorerWeights = allPlayers.map((st) => {
                 const gpg = st.pj > 0 ? st.goals / st.pj : 0;
-                const weight = Math.max(2, 3 + (st.goals * 3.5) + (gpg * 5));
+                const weight = st.pj === 0 && st.goals === 0
+                    ? Math.max(2.0, 3.2 + seededJitter('sc_w_' + st.player.id, 0.45))
+                    : Math.max(1.5, 2.5 + (st.goals * 3.8) + (gpg * 5.2));
                 return { st, weight };
             });
             const totalScorerW = scorerWeights.reduce((acc, x) => acc + x.weight, 0) || 1;
             const topScorerOptions = scorerWeights.map(x => {
                 const prob = x.weight / totalScorerW;
+                const noData = x.st.pj === 0 && x.st.goals === 0;
+                const rawOdd = noData
+                    ? 9.95 + seededJitter('sc_odd_' + x.st.player.id, 0.55)
+                    : (1 / prob) + seededJitter('sc_live_' + x.st.player.id, 0.14);
                 return {
                     targetId: x.st.player.id,
                     name: x.st.player.name,
-                    sub: `${x.st.team.name} • ${x.st.goals} goles`,
+                    sub: `${x.st.team.name} • ${x.st.goals} goles (${x.st.pj} PJ)`,
                     team: x.st.team,
-                    odd: !anyPlayed ? 2.00 : clampOdd(1 / prob, 1.40, 10.00),
+                    odd: clampOdd(rawOdd, 1.40, 12.00),
                     prob: Math.round(prob * 100)
                 };
             }).sort((a, b) => a.odd - b.odd);
 
-            // 3. Mejor Jugador del Torneo (Más MVPs, tope x10.00)
-            const mvpWeights = allPlayers.map(st => {
-                const weight = Math.max(2, 3 + (st.mvps * 5) + (st.goals * 1.2));
+            // 3. Mejor Jugador del Torneo (Más MVPs - TODOS los jugadores del torneo, iniciales ~9.40 - 10.65 con decimales)
+            const mvpWeights = allPlayers.map((st) => {
+                const weight = st.pj === 0 && st.mvps === 0 && st.goals === 0
+                    ? Math.max(2.0, 3.2 + seededJitter('mvp_w_' + st.player.id, 0.45))
+                    : Math.max(1.5, 2.5 + (st.mvps * 5.5) + (st.goals * 1.1));
                 return { st, weight };
             });
             const totalMvpW = mvpWeights.reduce((acc, x) => acc + x.weight, 0) || 1;
             const topMvpOptions = mvpWeights.map(x => {
                 const prob = x.weight / totalMvpW;
+                const noData = x.st.pj === 0 && x.st.mvps === 0 && x.st.goals === 0;
+                const rawOdd = noData
+                    ? 9.90 + seededJitter('mvp_odd_' + x.st.player.id, 0.55)
+                    : (1 / prob) + seededJitter('mvp_live_' + x.st.player.id, 0.14);
                 return {
                     targetId: x.st.player.id,
                     name: x.st.player.name,
-                    sub: `${x.st.team.name} • ${x.st.mvps} MVP`,
+                    sub: `${x.st.team.name} • ${x.st.mvps} MVP (${x.st.pj} PJ)`,
                     team: x.st.team,
-                    odd: !anyPlayed ? 2.00 : clampOdd(1 / prob, 1.40, 10.00),
+                    odd: clampOdd(rawOdd, 1.40, 12.00),
                     prob: Math.round(prob * 100)
                 };
             }).sort((a, b) => a.odd - b.odd);
 
-            // 4. Ganador de cada Grupo (1° puesto, tope x5.00)
+            // 4. Ganador de cada Grupo (1° puesto, decimales variados al inicio y ajuste por tabla)
             const groupWinners = (tournamentState.groups || []).map(g => {
                 const rows = calculateGroupStandings(g);
-                const weights = rows.map(r => {
-                    const w = r.pj === 0 ? 10 : Math.max(3, 10 + (r.pts * 3.5) + (r.dg * 1.4));
+                const weights = rows.map((r) => {
+                    const w = r.pj === 0
+                        ? Math.max(6.5, 9.5 + seededJitter('grp_w_' + g.name + r.team.id, 1.1))
+                        : Math.max(2.5, 9 + (r.pts * 3.6) + (r.dg * 1.5));
                     return { row: r, w };
                 });
                 const sumW = weights.reduce((acc, x) => acc + x.w, 0) || 1;
@@ -1548,15 +1617,16 @@
                     groupName: g.name,
                     options: weights.map(x => {
                         const prob = x.w / sumW;
+                        const rawOdd = (1 / prob) + seededJitter('grp_odd_' + g.name + x.row.team.id, 0.18);
                         return {
                             targetId: x.row.team.id,
                             name: x.row.team.name,
                             sub: `${x.row.pts} pts • DG ${x.row.dg >= 0 ? '+' + x.row.dg : x.row.dg}`,
                             team: x.row.team,
-                            odd: !anyPlayed ? 2.00 : clampOdd(1 / prob, 1.25, 5.00),
+                            odd: clampOdd(rawOdd, 1.25, 6.50),
                             prob: Math.round(prob * 100)
                         };
-                    })
+                    }).sort((a, b) => a.odd - b.odd)
                 };
             });
 
@@ -1797,7 +1867,7 @@
                     <div class="bg-[#2c2c2c] border border-[#3d3d3d] rounded-lg p-3.5 space-y-3">
                         <div class="flex items-center justify-between">
                             <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Resultado del Partido</span>
-                            <span class="text-[10px] text-neutral-400">${odds1x2.isDynamic ? 'Cuotas por tabla' : 'Cuota x2.00'}</span>
+                            <span class="text-[10px] text-neutral-400">${odds1x2.isLive ? 'Cuotas en vivo según tiempo restante' : odds1x2.isDynamic ? 'Cuotas por rendimiento' : 'Cuota inicial'}</span>
                         </div>
                         <div class="grid ${activeBuilderIsKo ? 'grid-cols-2' : 'grid-cols-3'} gap-2">
                             <button onclick="selectBetOutcome('${match.id}', ${activeBuilderIsKo}, 'HOME')" class="odd-btn ${isLegInSlip(match.id, '1X2', 'HOME') ? 'is-active' : ''} rounded py-2 px-2 text-center">
@@ -1845,9 +1915,9 @@
                     <div class="bg-[#2c2c2c] border border-[#3d3d3d] rounded-lg p-3.5 space-y-2.5">
                         <div class="flex items-center justify-between">
                             <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Total de Goles del Partido</span>
-                            <span class="text-[10px] text-neutral-400">${props.isDynamic ? `Esperado: ${props.expectedGoals} goles` : 'Cuota x2.00'}</span>
+                            <span class="text-[10px] text-neutral-400">Proyección: ${props.expectedGoals} goles</span>
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             ${props.lines.map(l => `
                                 <div class="bg-[#222] border border-[#3a3a3a] rounded p-2 space-y-1.5">
                                     <div class="text-center text-[11px] font-bold text-neutral-300">Línea ${l.line}</div>
@@ -1868,26 +1938,37 @@
                 `;
             }
 
-            // 3. Goleadores del partido
+            // 3. Goleadores del partido (+0.5, +1.5, +2.5, +3.5 goles como en bet365)
             if (showSection('PLAYERS')) {
                 html += `
                     <div class="bg-[#2c2c2c] border border-[#3d3d3d] rounded-lg p-3.5 space-y-2.5">
-                        <div class="text-xs font-bold uppercase tracking-wider text-emerald-400">Goleadores del Partido</div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Goles de Jugador (Líneas bet365)</span>
+                            <span class="text-[10px] text-neutral-400">+0.5 • +1.5 • +2.5 • +3.5</span>
+                        </div>
+                        <div class="space-y-2">
                             ${props.playersOdds.map(po => `
-                                <div class="bg-[#222] border border-[#3a3a3a] rounded px-3 py-2 flex items-center justify-between gap-2">
+                                <div class="bg-[#222] border border-[#3a3a3a] rounded px-3 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                                     <div class="min-w-0">
                                         <div class="text-xs font-bold text-white truncate">${escHtml(po.player.name)}</div>
-                                        <div class="text-[10px] text-neutral-400">${escHtml(po.team.name)} • ${po.goals} goles</div>
+                                        <div class="text-[10px] text-neutral-400">${escHtml(po.team.name)} • ${po.goals} goles${po.liveGoals > 0 ? ` (${po.liveGoals} hoy)` : ''}</div>
                                     </div>
-                                    <div class="flex items-center space-x-1.5 shrink-0">
-                                        <button onclick="selectMatchPropBet('${match.id}', ${activeBuilderIsKo}, 'PLAYER_GOALS', 'PLAYER_OVER', '${po.player.id}', 0.5, ${po.odd1}, '${escHtml(po.player.name)} mete gol (+0.5)')" class="odd-btn ${isLegInSlip(match.id, 'PLAYER_GOALS', 'PLAYER_OVER', po.player.id, 0.5) ? 'is-active' : ''} rounded px-2.5 py-1 text-center">
-                                            <div class="text-[9px] opacity-75">1+ Gol</div>
+                                    <div class="grid grid-cols-4 gap-1.5 shrink-0">
+                                        <button onclick="selectMatchPropBet('${match.id}', ${activeBuilderIsKo}, 'PLAYER_GOALS', 'PLAYER_OVER', '${po.player.id}', 0.5, ${po.odd1}, '${escHtml(po.player.name)} +0.5 goles (1+)')" class="odd-btn ${isLegInSlip(match.id, 'PLAYER_GOALS', 'PLAYER_OVER', po.player.id, 0.5) ? 'is-active' : ''} rounded px-2 py-1 text-center">
+                                            <div class="text-[9px] opacity-75">+0.5</div>
                                             <div class="odd-val text-xs">${po.odd1.toFixed(2)}</div>
                                         </button>
-                                        <button onclick="selectMatchPropBet('${match.id}', ${activeBuilderIsKo}, 'PLAYER_GOALS', 'PLAYER_OVER', '${po.player.id}', 1.5, ${po.odd2}, '${escHtml(po.player.name)} mete 2+ goles')" class="odd-btn ${isLegInSlip(match.id, 'PLAYER_GOALS', 'PLAYER_OVER', po.player.id, 1.5) ? 'is-active' : ''} rounded px-2.5 py-1 text-center">
-                                            <div class="text-[9px] opacity-75">2+ Goles</div>
+                                        <button onclick="selectMatchPropBet('${match.id}', ${activeBuilderIsKo}, 'PLAYER_GOALS', 'PLAYER_OVER', '${po.player.id}', 1.5, ${po.odd2}, '${escHtml(po.player.name)} +1.5 goles (2+)')" class="odd-btn ${isLegInSlip(match.id, 'PLAYER_GOALS', 'PLAYER_OVER', po.player.id, 1.5) ? 'is-active' : ''} rounded px-2 py-1 text-center">
+                                            <div class="text-[9px] opacity-75">+1.5</div>
                                             <div class="odd-val text-xs">${po.odd2.toFixed(2)}</div>
+                                        </button>
+                                        <button onclick="selectMatchPropBet('${match.id}', ${activeBuilderIsKo}, 'PLAYER_GOALS', 'PLAYER_OVER', '${po.player.id}', 2.5, ${po.odd3}, '${escHtml(po.player.name)} +2.5 goles (3+)')" class="odd-btn ${isLegInSlip(match.id, 'PLAYER_GOALS', 'PLAYER_OVER', po.player.id, 2.5) ? 'is-active' : ''} rounded px-2 py-1 text-center">
+                                            <div class="text-[9px] opacity-75">+2.5</div>
+                                            <div class="odd-val text-xs">${po.odd3.toFixed(2)}</div>
+                                        </button>
+                                        <button onclick="selectMatchPropBet('${match.id}', ${activeBuilderIsKo}, 'PLAYER_GOALS', 'PLAYER_OVER', '${po.player.id}', 3.5, ${po.odd4}, '${escHtml(po.player.name)} +3.5 goles (4+)')" class="odd-btn ${isLegInSlip(match.id, 'PLAYER_GOALS', 'PLAYER_OVER', po.player.id, 3.5) ? 'is-active' : ''} rounded px-2 py-1 text-center">
+                                            <div class="text-[9px] opacity-75">+3.5</div>
+                                            <div class="odd-val text-xs">${po.odd4.toFixed(2)}</div>
                                         </button>
                                     </div>
                                 </div>
@@ -2653,7 +2734,7 @@
                                     ? `<span class="bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.2 rounded">FINALIZADO</span>`
                                     : odds.isLive
                                         ? `<span class="bg-rose-600 text-white font-extrabold px-2 py-0.5 rounded animate-pulse">${liveBadgeText}</span>`
-                                        : `<span class="bg-amber-500/15 text-[#ffdf1b] font-bold px-1.5 py-0.2 rounded">${odds.isDynamic ? 'CUOTA DINÁMICA' : 'CUOTA x2'}</span>`
+                                        : `<span class="bg-amber-500/15 text-[#ffdf1b] font-bold px-1.5 py-0.2 rounded">${odds.isDynamic ? 'CUOTA DINÁMICA' : 'CUOTA INICIAL'}</span>`
                                 }
                                 ${!m.played
                                     ? `<span class="bg-[#027b5b]/30 group-hover:bg-[#027b5b] text-emerald-300 group-hover:text-white border border-emerald-500/40 font-bold px-2 py-0.5 rounded transition">+ Bet Builder &rsaquo;</span>`
@@ -2750,9 +2831,9 @@
                             <h3 class="text-sm font-bold text-white uppercase tracking-wider">${escHtml(title)}</h3>
                             <p class="text-[11px] text-emerald-100">${escHtml(subtitle)}</p>
                         </div>
-                        <span class="text-[10px] bg-black/25 text-[#ffdf1b] font-bold px-2 py-0.5 rounded">${sp.anyPlayed ? 'DINÁMICA' : 'CUOTA x2'}</span>
+                        <span class="text-[10px] bg-black/25 text-[#ffdf1b] font-bold px-2 py-0.5 rounded">${sp.anyPlayed ? 'DINÁMICA' : 'APERTURA'}</span>
                     </div>
-                    <div class="p-3 space-y-2 max-h-80 overflow-y-auto">
+                    <div class="p-3 space-y-2 max-h-96 overflow-y-auto">
                         ${options.map(opt => {
                             const label = `${prefixText}: ${opt.name}`;
                             return `
@@ -2764,7 +2845,7 @@
                                             <div class="text-[10px] text-neutral-400 truncate">${escHtml(opt.sub)}</div>
                                         </div>
                                     </div>
-                                    <button ${done ? 'disabled' : ''} onclick="selectSpecialBet('${marketType}', ${groupName ? `'${escHtml(groupName)}'` : 'null'}, '${opt.targetId}', ${opt.odd}, '${escHtml(label)}', ${opt.prob}, ${sp.anyPlayed})" class="odd-btn rounded px-3 py-1.5 text-center shrink-0 disabled:opacity-40">
+                                    <button ${done ? 'disabled' : ''} onclick="selectSpecialBet('${marketType}', ${groupName ? `'${escHtml(groupName)}'` : 'null'}, '${opt.targetId}', ${opt.odd}, '${escHtml(label)}')" class="odd-btn rounded px-3 py-1.5 text-center shrink-0 disabled:opacity-40">
                                         <span class="odd-val text-xs sm:text-sm">${opt.odd.toFixed(2)}</span>
                                     </button>
                                 </div>
@@ -2787,8 +2868,8 @@
 
             container.innerHTML =
                 renderSpecialBox('Campeón del Mundial 3v3', '¿Qué selección levanta la copa?', 'CHAMPION', null, sp.championOptions, 'Campeón') +
-                renderSpecialBox('Máximo Goleador (Bota de Oro)', '¿Qué jugador termina con más goles?', 'TOP_SCORER', null, sp.topScorerOptions.slice(0, 12), 'Goleador del Torneo') +
-                renderSpecialBox('Mejor Jugador (Más MVPs)', '¿Qué jugador gana más premios MVP?', 'TOP_MVP', null, sp.topMvpOptions.slice(0, 12), 'Más MVPs') +
+                renderSpecialBox('Máximo Goleador (Bota de Oro)', `Todos los jugadores (${sp.topScorerOptions.length}) • ¿Quién mete más goles?`, 'TOP_SCORER', null, sp.topScorerOptions, 'Goleador del Torneo') +
+                renderSpecialBox('Mejor Jugador (Más MVPs)', `Todos los jugadores (${sp.topMvpOptions.length}) • ¿Quién gana más premios MVP?`, 'TOP_MVP', null, sp.topMvpOptions, 'Más MVPs') +
                 groupsHtml;
         }
 
