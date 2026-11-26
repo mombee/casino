@@ -1267,9 +1267,9 @@
 
         /**
          * Calcula cuotas P2P realistas para 3v3 de muchos goles:
-         * - Incorpora historial del torneo + diferencia de goles en vivo + tiempo restante del partido.
-         * - Mientras menos tiempo falta para terminar el partido, más se consolidan las probabilidades
-         *   de quien va ganando (o del empate si van iguales) y más suben las cuotas de remontada.
+         * - En la previa ajusta las cuotas de forma gradual según puntos, diferencia de gol,
+         *   racha y la calidad de los rivales enfrentados (evitando saltos exagerados como x5 por 1 derrota).
+         * - En vivo incorpora la diferencia de goles actual y el tiempo restante del partido.
          */
         function computeMatchOdds(match, isKnockout) {
             const statsMap = getAllTeamsStatsMap();
@@ -1287,10 +1287,10 @@
             // Antes de empezar el torneo (0 PJ y sin empezar), cuotas iniciales con ligera oscilación realista por partido
             if (!hasHistory && !isLive) {
                 const seedBase = `${match.id}_${match.homeId}_${match.awayId}`;
-                const tilt = seededJitter(seedBase + '_tilt', 0.22); // diferencia sutil entre local y visitante
+                const tilt = seededJitter(seedBase + '_tilt', 0.16);
                 if (isKnockout) {
-                    const homeOdd = clampOdd(1.94 + tilt, 1.68, 2.24);
-                    const awayOdd = clampOdd(1.94 - tilt, 1.68, 2.24);
+                    const homeOdd = clampOdd(1.92 + tilt, 1.72, 2.16);
+                    const awayOdd = clampOdd(1.92 - tilt, 1.72, 2.16);
                     const pH = Math.round((1 / homeOdd) / ((1 / homeOdd) + (1 / awayOdd)) * 100);
                     return {
                         isDynamic: false,
@@ -1303,10 +1303,10 @@
                         probAway: 100 - pH
                     };
                 }
-                const drawJitter = seededJitter(seedBase + '_draw', 0.18);
-                const homeOdd = clampOdd(2.58 + tilt, 2.25, 2.95);
-                const awayOdd = clampOdd(2.62 - tilt, 2.25, 2.95);
-                const drawOdd = clampOdd(3.38 + drawJitter, 3.10, 3.70);
+                const drawJitter = seededJitter(seedBase + '_draw', 0.16);
+                const homeOdd = clampOdd(2.42 + tilt, 2.18, 2.72);
+                const awayOdd = clampOdd(2.46 - tilt, 2.18, 2.72);
+                const drawOdd = clampOdd(3.32 + drawJitter, 3.05, 3.60);
                 const invSum = (1 / homeOdd) + (1 / drawOdd) + (1 / awayOdd);
                 const pH = Math.round(((1 / homeOdd) / invSum) * 100);
                 const pD = Math.round(((1 / drawOdd) / invSum) * 100);
@@ -1322,62 +1322,83 @@
                 };
             }
 
-            const teamPower = (s) => {
+            // Fuerza de cada equipo suavizada (evita extremos irreales tras pocos partidos)
+            const baseTeamRating = (s) => {
                 if (!s || s.pj === 0) return 50;
-                const ppg = s.pts / s.pj;
-                const gdpg = Math.max(-4.5, Math.min(4.5, s.dg / s.pj));
+                const confidence = Math.min(1, s.pj / 3); // Escala gradualmente en las primeras fechas
+                const ppg = s.pts / s.pj; // 0..3
+                const gdpg = Math.max(-3.0, Math.min(3.0, s.dg / s.pj));
                 const recent = (s.form || []).slice(-3);
                 const formAvg = recent.length
                     ? recent.reduce((acc, r) => acc + (r === 'V' ? 1 : r === 'E' ? 0.5 : 0), 0) / recent.length
                     : 0.5;
-                const streakBonus = (s.pg - s.pp) * 6.0;
-                return 50 + (ppg * 10.5) + (gdpg * 5.8) + ((formAvg - 0.5) * 16) + streakBonus;
+                const rawDelta = ((ppg - 1.35) * 4.8) + (gdpg * 1.9) + ((formAvg - 0.5) * 6.5);
+                return 50 + rawDelta * confidence;
             };
 
-            // A medida que avanza el reloj, pesa menos la previa y pesa mucho más el marcador actual vs tiempo restante
-            let diff = (teamPower(h) - teamPower(a)) * (0.45 + 0.55 * remFrac);
+            // Ajuste por fuerza de los rivales contra los que ya jugó cada equipo (SOS)
+            const strengthOfSchedule = (teamId) => {
+                const playedVs = tournamentState.matches.filter(m => m.played && (m.homeId === teamId || m.awayId === teamId));
+                if (!playedVs.length) return 0;
+                let oppSum = 0;
+                playedVs.forEach(m => {
+                    const oppId = m.homeId === teamId ? m.awayId : m.homeId;
+                    oppSum += (baseTeamRating(statsMap[oppId]) - 50);
+                });
+                return (oppSum / playedVs.length) * 0.45;
+            };
+
+            const ratingH = baseTeamRating(h) + strengthOfSchedule(match.homeId);
+            const ratingA = baseTeamRating(a) + strengthOfSchedule(match.awayId);
+
+            // Diferencia previa moderada: 1 victoria vs 1 derrota da cuotas cercanas a ~1.95 vs ~2.85 (no x5)
+            const preMatchJitter = seededJitter(`${match.id}_${match.homeId}_${match.awayId}`, 1.2);
+            let diff = ((ratingH - ratingA) + preMatchJitter) * (0.45 + 0.55 * remFrac);
 
             const goalDiffLive = liveHome - liveAway;
-            // Urgencia temporal: 1 gol de ventaja faltando 1 minuto vale mucho más que faltando 9 minutos
-            const timeMultiplier = 1 + Math.pow(elapsedFrac, 1.35) * 2.4;
-            diff += goalDiffLive * 21 * timeMultiplier;
+            // En vivo sí escala según goles de ventaja y tiempo restante
+            const timeMultiplier = 1 + Math.pow(elapsedFrac, 1.35) * 2.3;
+            diff += goalDiffLive * 20 * timeMultiplier;
 
-            const homeShare = 1 / (1 + Math.exp(-diff / 18));
+            const homeShare = 1 / (1 + Math.exp(-diff / 22));
+
+            // Topes máximos en previa: en fase regular hasta ~3.60 (en vivo sí puede subir hasta 12.00)
+            const preMaxWin = isLive ? 12.00 : 3.65;
+            const preMinWin = isLive ? 1.06 : 1.55;
 
             if (isKnockout) {
-                const pHome = Math.max(0.06, Math.min(0.94, homeShare));
+                const pHome = Math.max(0.08, Math.min(0.92, homeShare));
                 const pAway = 1 - pHome;
                 return {
                     isDynamic: true,
                     isLive,
-                    home: clampOdd(1 / pHome, 1.06, 12.00),
+                    home: clampOdd(1 / pHome, isLive ? 1.06 : 1.35, isLive ? 10.00 : 2.95),
                     draw: null,
-                    away: clampOdd(1 / pAway, 1.06, 12.00),
+                    away: clampOdd(1 / pAway, isLive ? 1.06 : 1.35, isLive ? 10.00 : 2.95),
                     probHome: Math.round(pHome * 100),
                     probDraw: 0,
                     probAway: Math.round(pAway * 100)
                 };
             }
 
-            // En fase regular: si van empatados y falta poco, la chance de empate sube; si hay diferencia y falta poco, el empate se desploma
             let pDraw;
             if (goalDiffLive === 0) {
-                const baseDraw = isLive ? (0.24 + elapsedFrac * 0.34) : 0.23;
-                pDraw = Math.max(0.10, Math.min(0.62, baseDraw - Math.abs(diff) * 0.0012));
+                const baseDraw = isLive ? (0.27 + elapsedFrac * 0.32) : 0.27;
+                pDraw = Math.max(0.18, Math.min(0.60, baseDraw - Math.abs(diff) * 0.0008));
             } else {
-                const drawDecay = Math.max(0.04, 0.22 * remFrac - (Math.abs(goalDiffLive) - 1) * 0.06);
-                pDraw = Math.max(0.04, drawDecay);
+                const drawDecay = Math.max(0.05, 0.24 * remFrac - (Math.abs(goalDiffLive) - 1) * 0.06);
+                pDraw = Math.max(0.05, drawDecay);
             }
 
-            const pHome = Math.max(0.04, (1 - pDraw) * homeShare);
-            const pAway = Math.max(0.04, (1 - pDraw) * (1 - homeShare));
+            const pHome = Math.max(0.05, (1 - pDraw) * homeShare);
+            const pAway = Math.max(0.05, (1 - pDraw) * (1 - homeShare));
 
             return {
                 isDynamic: true,
                 isLive,
-                home: clampOdd(1 / pHome, 1.06, 14.00),
-                draw: clampOdd(1 / pDraw, 1.45, 12.00),
-                away: clampOdd(1 / pAway, 1.06, 14.00),
+                home: clampOdd(1 / pHome, preMinWin, preMaxWin),
+                draw: clampOdd(1 / pDraw, isLive ? 1.45 : 2.85, isLive ? 11.00 : 3.95),
+                away: clampOdd(1 / pAway, preMinWin, preMaxWin),
                 probHome: Math.round(pHome * 100),
                 probDraw: Math.round(pDraw * 100),
                 probAway: Math.round(pAway * 100)
@@ -1446,24 +1467,31 @@
 
                 // Cuotas iniciales con decimales variados:
                 // +0.5 goles: 1.40 - 1.70 | +1.5 goles: 1.90 - 2.10 | +2.5 goles: 2.50 - 3.00 | +3.5 goles: ~4.00
-                const j1 = seededJitter(p.id + '_g1', 0.15); // 1.40 .. 1.70 (centro 1.55)
+                const j1 = seededJitter(p.id + '_g1', 0.14); // 1.40 .. 1.68 (centro 1.54)
                 const j2 = seededJitter(p.id + '_g2', 0.10); // 1.90 .. 2.10 (centro 2.00)
                 const j3 = seededJitter(p.id + '_g3', 0.25); // 2.50 .. 3.00 (centro 2.75)
                 const j4 = seededJitter(p.id + '_g4', 0.18); // ~3.82 .. 4.18 (centro 4.00)
 
-                const baseOdd1 = 1.55 + j1;
+                const baseOdd1 = 1.54 + j1;
                 const baseOdd2 = 2.00 + j2;
                 const baseOdd3 = 2.75 + j3;
                 const baseOdd4 = 4.00 + j4;
 
-                // Factor de forma partido a partido: si viene metiendo goles, baja su cuota; si no mete, sube gradualmente
+                // Factor de forma partido a partido:
+                // - Apenas sube si lleva partidos sin mojar (máx +8% sobre la base, tope 1.70 para +0.5)
+                // - Baja con claridad cuando mete goles (ej. con 2 goles/partido baja hacia ~1.20)
                 const gpg = pjCount > 0 ? st.goals / pjCount : 0.95;
-                const formRatio = pjCount > 0
-                    ? Math.max(0.62, Math.min(1.55, 1 / (0.68 + gpg * 0.34)))
-                    : 1.0;
+                let formRatio = 1.0;
+                if (pjCount > 0) {
+                    if (gpg >= 0.95) {
+                        formRatio = Math.max(0.58, 1 / (1 + (gpg - 0.95) * 0.28));
+                    } else {
+                        formRatio = Math.min(1.08, 1 + (0.95 - gpg) * 0.08);
+                    }
+                }
 
-                // Ajuste por tiempo restante en vivo y goles ya convertidos en el partido actual
-                const timePressure = 1 + (1 - remFrac) * 1.15;
+                // Ajuste por tiempo restante en vivo (más contenido) y goles ya convertidos en el partido actual
+                const timePressure = 1 + (1 - remFrac) * 0.55;
 
                 const adjustPlayerLine = (baseOdd, lineTarget) => {
                     const needed = lineTarget - livePlayerGoals;
@@ -1474,10 +1502,10 @@
                     return Number(raw.toFixed(2));
                 };
 
-                const odd1 = clampOdd(adjustPlayerLine(baseOdd1, 1), 1.04, 3.20);
-                const odd2 = clampOdd(adjustPlayerLine(baseOdd2, 2), 1.06, 4.80);
-                const odd3 = clampOdd(adjustPlayerLine(baseOdd3, 3), 1.10, 7.20);
-                const odd4 = clampOdd(adjustPlayerLine(baseOdd4, 4), 1.15, 11.50);
+                const odd1 = clampOdd(adjustPlayerLine(baseOdd1, 1), 1.04, isLive ? 2.15 : 1.70);
+                const odd2 = clampOdd(adjustPlayerLine(baseOdd2, 2), 1.06, isLive ? 3.10 : 2.25);
+                const odd3 = clampOdd(adjustPlayerLine(baseOdd3, 3), 1.10, isLive ? 4.50 : 3.20);
+                const odd4 = clampOdd(adjustPlayerLine(baseOdd4, 4), 1.15, isLive ? 6.50 : 4.35);
 
                 const mvpBase = (st ? st.mvps + 0.6 : 0.6) / (pjCount + 3.6);
                 const mvpLiveBoost = livePlayerGoals * (0.11 + (1 - remFrac) * 0.08);
