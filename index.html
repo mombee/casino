@@ -758,6 +758,7 @@
 
         let selectedRoundFilter = 'ALL';
         let myBetsFilter = 'ALL';
+        let expandedBetId = null;
         // Lista de patas (selecciones) en el boleto actual. Soporta Simple (1 pata) y Combinada / Bet Builder (2+ patas)
         let activeSlipLegs = [];
         let authMode = 'login';
@@ -2567,6 +2568,239 @@
             renderMyBets();
         }
 
+        function toggleExpandBet(betId) {
+            expandedBetId = expandedBetId === betId ? null : betId;
+            renderMyBets();
+        }
+
+        // Calcula el estado detallado en vivo o finalizado de cada selección (pata) de una apuesta estilo bet365
+        function getLegTrackingInfo(leg) {
+            if (leg.category === 'SPECIAL') {
+                const regularDone = tournamentState.matches.length > 0 && tournamentState.matches.every(m => m.played);
+                const tourneyDone = isTournamentFinished();
+                const ready = leg.marketType === 'GROUP_WINNER' ? regularDone : tourneyDone;
+
+                if (leg.marketType === 'TOP_SCORER' || leg.marketType === 'TOP_MVP') {
+                    const pMap = getPlayerStatsMap();
+                    const st = pMap[leg.targetId];
+                    const current = leg.marketType === 'TOP_SCORER' ? (st?.goals || 0) : (st?.mvps || 0);
+                    const all = Object.values(pMap);
+                    const leaderVal = Math.max(...all.map(x => leg.marketType === 'TOP_SCORER' ? x.goals : x.mvps), 0);
+                    const unit = leg.marketType === 'TOP_SCORER' ? 'goles' : 'MVPs';
+
+                    if (ready) {
+                        const hit = evaluateSpecialBetOutcome(leg);
+                        return {
+                            state: hit ? 'HIT' : 'MISS',
+                            statusText: hit ? 'Cumplida' : 'No cumplida',
+                            detailText: `${current} ${unit} (Líder final: ${leaderVal})`,
+                            progress: leaderVal > 0 ? Math.min(100, Math.round((current / leaderVal) * 100)) : 0,
+                            badgeVal: `${current}`
+                        };
+                    }
+                    const leading = current > 0 && current === leaderVal;
+                    return {
+                        state: 'PENDING',
+                        statusText: leading ? 'Liderando (en curso)' : 'En curso',
+                        detailText: `Actual: ${current} ${unit} (Líder: ${leaderVal})`,
+                        progress: leaderVal > 0 ? Math.min(100, Math.round((current / leaderVal) * 100)) : 10,
+                        badgeVal: `${current}`
+                    };
+                }
+
+                if (ready) {
+                    const hit = evaluateSpecialBetOutcome(leg);
+                    return {
+                        state: hit ? 'HIT' : 'MISS',
+                        statusText: hit ? 'Cumplida' : 'No cumplida',
+                        detailText: hit ? 'Objetivo alcanzado' : 'No alcanzó el objetivo',
+                        progress: hit ? 100 : 0,
+                        badgeVal: null
+                    };
+                }
+                return {
+                    state: 'PENDING',
+                    statusText: 'En curso',
+                    detailText: 'Se define al finalizar la fase/torneo',
+                    progress: null,
+                    badgeVal: null
+                };
+            }
+
+            const match = tournamentState.matches.find(m => m.id === leg.matchId) ||
+                          tournamentState.knockoutMatches.find(m => m.id === leg.matchId);
+            if (!match) {
+                return {
+                    state: 'PENDING',
+                    statusText: 'Pendiente',
+                    detailText: 'Partido programado',
+                    progress: null,
+                    badgeVal: null
+                };
+            }
+
+            const h = getTeam(match.homeId);
+            const a = getTeam(match.awayId);
+            const hScore = Number(match.homeScore) || 0;
+            const aScore = Number(match.awayScore) || 0;
+            const isPlayed = Boolean(match.played);
+            const isLive = !isPlayed && Boolean(match.isLive || (hScore + aScore) > 0);
+            const scoreContext = `${h ? h.code : 'LOC'} ${hScore} - ${aScore} ${a ? a.code : 'VIS'}`;
+            const mType = leg.marketType || '1X2';
+
+            if (!isPlayed && !isLive) {
+                return {
+                    state: 'PENDING',
+                    statusText: 'Sin empezar',
+                    detailText: `${h ? h.name : 'Local'} vs ${a ? a.name : 'Visitante'}`,
+                    progress: null,
+                    badgeVal: null
+                };
+            }
+
+            if (mType === 'PLAYER_GOALS') {
+                const pGoals = (match.goals && match.goals[leg.targetId]) || 0;
+                const targetNeeded = Math.floor(Number(leg.line) || 0) + 1;
+                const hit = pGoals >= targetNeeded;
+                const pct = Math.min(100, Math.round((pGoals / targetNeeded) * 100));
+                if (hit) {
+                    return {
+                        state: 'HIT',
+                        statusText: 'Cumplida',
+                        detailText: `${pGoals} de ${targetNeeded} goles • ${scoreContext}`,
+                        progress: 100,
+                        badgeVal: `${pGoals}`
+                    };
+                }
+                if (isPlayed) {
+                    return {
+                        state: 'MISS',
+                        statusText: 'No cumplida',
+                        detailText: `Hizo ${pGoals} de ${targetNeeded} goles • ${scoreContext}`,
+                        progress: pct,
+                        badgeVal: `${pGoals}`
+                    };
+                }
+                return {
+                    state: 'PENDING',
+                    statusText: pGoals > 0 ? `En progreso (${pGoals}/${targetNeeded})` : `Faltan ${targetNeeded}`,
+                    detailText: `${pGoals} de ${targetNeeded} goles • ${scoreContext}`,
+                    progress: pct,
+                    badgeVal: `${pGoals}`
+                };
+            }
+
+            if (mType === 'TOTAL_GOALS') {
+                const total = hScore + aScore;
+                const line = Number(leg.line) || 0;
+                if (leg.pick === 'OVER') {
+                    const targetNeeded = Math.floor(line) + 1;
+                    const hit = total > line;
+                    const pct = Math.min(100, Math.round((total / targetNeeded) * 100));
+                    if (hit) {
+                        return {
+                            state: 'HIT',
+                            statusText: 'Cumplida',
+                            detailText: `${total} goles totales (línea +${line}) • ${scoreContext}`,
+                            progress: 100,
+                            badgeVal: `${total}`
+                        };
+                    }
+                    if (isPlayed) {
+                        return {
+                            state: 'MISS',
+                            statusText: 'No cumplida',
+                            detailText: `Terminó con ${total} goles (pedía +${line}) • ${scoreContext}`,
+                            progress: pct,
+                            badgeVal: `${total}`
+                        };
+                    }
+                    return {
+                        state: 'PENDING',
+                        statusText: `Van ${total} de ${targetNeeded} goles`,
+                        detailText: `Faltan ${targetNeeded - total} goles • ${scoreContext}`,
+                        progress: pct,
+                        badgeVal: `${total}`
+                    };
+                } else {
+                    const maxAllowed = Math.floor(line);
+                    const busted = total > line;
+                    if (busted) {
+                        return {
+                            state: 'MISS',
+                            statusText: 'Superada',
+                            detailText: `Ya van ${total} goles (máx. ${maxAllowed}) • ${scoreContext}`,
+                            progress: 100,
+                            badgeVal: `${total}`
+                        };
+                    }
+                    if (isPlayed) {
+                        return {
+                            state: 'HIT',
+                            statusText: 'Cumplida',
+                            detailText: `Terminó con ${total} goles (máx. ${maxAllowed}) • ${scoreContext}`,
+                            progress: 100,
+                            badgeVal: `${total}`
+                        };
+                    }
+                    const pct = maxAllowed > 0 ? Math.min(100, Math.round((total / maxAllowed) * 100)) : 0;
+                    return {
+                        state: 'PENDING',
+                        statusText: `Van ${total} de máx. ${maxAllowed}`,
+                        detailText: `Margen de ${maxAllowed - total} goles (se define al final) • ${scoreContext}`,
+                        progress: pct,
+                        badgeVal: `${total}`
+                    };
+                }
+            }
+
+            if (mType === 'MATCH_MVP') {
+                const mvpPlayer = getPlayer(leg.targetId);
+                const mvpName = mvpPlayer ? mvpPlayer.name : 'Jugador';
+                if (isPlayed) {
+                    const hit = Boolean(match.mvpId && match.mvpId === leg.targetId);
+                    const actualMvp = match.mvpId ? getPlayer(match.mvpId) : null;
+                    return {
+                        state: hit ? 'HIT' : 'MISS',
+                        statusText: hit ? 'Cumplida' : 'No cumplida',
+                        detailText: hit
+                            ? `${mvpName} fue elegido MVP • ${scoreContext}`
+                            : `MVP elegido: ${actualMvp ? actualMvp.name : 'Otro'} • ${scoreContext}`,
+                        progress: null,
+                        badgeVal: null
+                    };
+                }
+                const liveGoals = (match.goals && match.goals[leg.targetId]) || 0;
+                return {
+                    state: 'PENDING',
+                    statusText: liveGoals > 0 ? `En curso (${liveGoals} gol${liveGoals > 1 ? 'es' : ''})` : 'Se define al final',
+                    detailText: `En vivo: ${scoreContext}`,
+                    progress: null,
+                    badgeVal: null
+                };
+            }
+
+            // 1X2 o Doble Oportunidad: nunca se da por ganada hasta que termine el partido
+            const matchWithKo = { ...match, _ko: Boolean(leg.isKnockout) };
+            const currentlyWinning = evaluateMatchBetOutcome(leg, matchWithKo);
+            if (isPlayed) {
+                return {
+                    state: currentlyWinning ? 'HIT' : 'MISS',
+                    statusText: currentlyWinning ? 'Cumplida' : 'No cumplida',
+                    detailText: `Final: ${scoreContext}`,
+                    progress: null,
+                    badgeVal: null
+                };
+            }
+            return {
+                state: 'PENDING',
+                statusText: currentlyWinning ? 'Parcial a favor (en juego)' : 'En juego',
+                detailText: `En vivo: ${scoreContext} • Se define al finalizar`,
+                progress: null,
+                badgeVal: null
+            };
+        }
+
         /* --- Summary Strip --- */
         function renderSummaryStrip() {
             const el = document.getElementById('summary-strip');
@@ -2998,11 +3232,82 @@
                 return;
             }
 
+            const renderLegStepRow = (leg, idx, totalLegs, isCreator) => {
+                const tr = getLegTrackingInfo(leg);
+                const isLast = idx === totalLegs - 1;
+
+                // Icono circular estilo bet365
+                let dotHtml = `<span class="w-5 h-5 rounded-full bg-[#3d3d3d] border border-neutral-500 flex items-center justify-center text-[10px] text-neutral-300 shrink-0">•</span>`;
+                let lineClass = 'bg-[#454545]';
+                let titleColor = 'text-white';
+                let statusPill = `<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-neutral-700/70 text-neutral-300">${escHtml(tr.statusText)}</span>`;
+
+                if (tr.state === 'HIT') {
+                    dotHtml = `<span class="w-5 h-5 rounded-full bg-[#00c853] text-[#111] font-extrabold flex items-center justify-center text-xs shrink-0">✓</span>`;
+                    lineClass = 'bg-[#00c853]';
+                    titleColor = 'text-[#69f0ae]';
+                    statusPill = `<span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">${escHtml(tr.statusText)}</span>`;
+                } else if (tr.state === 'MISS') {
+                    dotHtml = `<span class="w-5 h-5 rounded-full bg-rose-500 text-white font-extrabold flex items-center justify-center text-xs shrink-0">✕</span>`;
+                    lineClass = 'bg-rose-500/60';
+                    titleColor = 'text-rose-300 line-through opacity-85';
+                    statusPill = `<span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300">${escHtml(tr.statusText)}</span>`;
+                } else if (tr.state === 'LEADING') {
+                    dotHtml = `<span class="w-5 h-5 rounded-full bg-[#027b5b] border border-[#00e676] text-[#00e676] font-extrabold flex items-center justify-center text-[10px] shrink-0">▲</span>`;
+                    lineClass = 'bg-[#027b5b]';
+                    titleColor = 'text-emerald-200';
+                    statusPill = `<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-[#027b5b]/40 text-emerald-300 border border-emerald-500/40">${escHtml(tr.statusText)}</span>`;
+                } else if (tr.state === 'TRAILING') {
+                    dotHtml = `<span class="w-5 h-5 rounded-full bg-amber-500/25 border border-amber-400 text-amber-300 font-bold flex items-center justify-center text-[10px] shrink-0">!</span>`;
+                    statusPill = `<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">${escHtml(tr.statusText)}</span>`;
+                }
+
+                const barFillColor = tr.state === 'HIT'
+                    ? 'bg-[#00e676]'
+                    : tr.state === 'MISS'
+                        ? 'bg-rose-500'
+                        : 'bg-neutral-500';
+
+                return `
+                    <div class="flex items-stretch gap-3">
+                        <div class="flex flex-col items-center">
+                            ${dotHtml}
+                            ${!isLast ? `<div class="w-0.5 flex-grow my-1 ${lineClass}"></div>` : ''}
+                        </div>
+                        <div class="flex-1 min-w-0 ${!isLast ? 'pb-3.5' : 'pb-1'} space-y-1.5">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div class="min-w-0">
+                                    <div class="text-xs sm:text-sm font-bold ${titleColor} leading-snug">${escHtml(leg.pickLabel)}</div>
+                                    <div class="text-[11px] text-neutral-400">${escHtml(leg.matchTitle || '')} • ${escHtml(tr.detailText)}</div>
+                                </div>
+                                <div class="flex items-center space-x-2 shrink-0">
+                                    ${statusPill}
+                                    <span class="text-xs font-extrabold text-[#ffdf1b] bg-[#181818] border border-[#3a3a3a] px-2 py-0.5 rounded">${Number(leg.odd || 1).toFixed(2)}</span>
+                                </div>
+                            </div>
+                            ${tr.progress !== null ? `
+                                <div class="flex items-center gap-2 pt-0.5">
+                                    <div class="flex-1 h-1.5 bg-[#181818] rounded-full overflow-hidden border border-[#363636]">
+                                        <div class="h-full ${barFillColor} transition-all duration-300" style="width: ${tr.progress}%"></div>
+                                    </div>
+                                    ${tr.badgeVal !== null ? `<span class="text-[11px] font-extrabold px-2 py-0.2 rounded ${tr.state === 'HIT' ? 'bg-[#00c853] text-[#111]' : 'bg-[#333] text-white'}">${escHtml(tr.badgeVal)}</span>` : ''}
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            };
+
             container.innerHTML = mine.map(b => {
                 const isCreator = b.creator === currentUser;
                 const myStake = isCreator ? b.creatorStake : b.takerStake;
                 const pot = b.creatorStake + b.takerStake;
                 const rival = isCreator ? (b.taker || b.targetUser || 'Rival') : b.creator;
+                const isExpanded = expandedBetId === b.id;
+                const legs = Array.isArray(b.legs) && b.legs.length > 0 ? b.legs : [b];
+                const legsStates = legs.map(l => getLegTrackingInfo(l).state);
+                const hitCount = legsStates.filter(s => s === 'HIT').length;
+                const allDone = hitCount === legs.length;
 
                 let statusBadge = `<span class="bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-bold">${isCreator ? `ENVIADA A ${escHtml(rival)}` : `RECIBIDA DE ${escHtml(rival)}`}</span>`;
                 if (b.status === 'MATCHED') statusBadge = `<span class="bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded font-bold">1v1 ACTIVO vs ${escHtml(rival)}</span>`;
@@ -3015,36 +3320,103 @@
                         : `<span class="bg-rose-500/25 text-rose-300 px-2 py-0.5 rounded font-bold">PERDIDA (-${formatMoney(myStake)})</span>`;
                 }
 
+                // Resumen de marcadores de los partidos involucrados en esta apuesta
+                const matchIds = Array.from(new Set(legs.filter(l => l.category !== 'SPECIAL').map(l => l.matchId)));
+                const matchScoreCards = matchIds.map(mid => {
+                    const m = tournamentState.matches.find(x => x.id === mid) || tournamentState.knockoutMatches.find(x => x.id === mid);
+                    if (!m) return '';
+                    const h = getTeam(m.homeId), a = getTeam(m.awayId);
+                    if (!h || !a) return '';
+                    const liveOrDone = m.played || m.isLive || (Number(m.homeScore) || 0) + (Number(m.awayScore) || 0) > 0;
+                    return `
+                        <div class="bg-[#1b1b1b] border border-[#353535] rounded-lg px-3 py-2 flex items-center justify-between text-xs">
+                            <div class="space-y-1 min-w-0">
+                                <div class="flex items-center space-x-2">
+                                    ${flagMarkup(h)}
+                                    <span class="font-bold text-white truncate">${escHtml(h.name)}</span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    ${flagMarkup(a)}
+                                    <span class="font-bold text-white truncate">${escHtml(a.name)}</span>
+                                </div>
+                            </div>
+                            <div class="text-right space-y-1 shrink-0 pl-3">
+                                <div class="font-sport text-base font-bold ${liveOrDone ? 'text-[#ffdf1b]' : 'text-neutral-500'}">${liveOrDone ? (m.homeScore || 0) : '—'}</div>
+                                <div class="font-sport text-base font-bold ${liveOrDone ? 'text-[#ffdf1b]' : 'text-neutral-500'}">${liveOrDone ? (m.awayScore || 0) : '—'}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
                 return `
-                    <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div class="space-y-1">
-                            <div class="flex items-center space-x-2 text-[11px]">
-                                <span class="text-neutral-400 font-semibold">${escHtml(b.meta)}</span>
-                                ${statusBadge}
+                    <div class="bg-[#282828] border ${isExpanded ? 'border-[#027b5b]' : 'border-[#3a3a3a]'} rounded-lg overflow-hidden transition">
+                        <div onclick="toggleExpandBet('${b.id}')" class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer hover:bg-[#2f2f2f] transition">
+                            <div class="space-y-1 min-w-0">
+                                <div class="flex flex-wrap items-center gap-2 text-[11px]">
+                                    <span class="text-neutral-400 font-semibold">${escHtml(b.meta)}</span>
+                                    ${statusBadge}
+                                    <span class="bg-[#1b1b1b] border border-[#444] ${allDone ? 'text-emerald-300' : 'text-neutral-300'} font-bold px-2 py-0.5 rounded">${hitCount}/${legs.length} cumplidas</span>
+                                </div>
+                                <div class="text-sm font-bold text-white">${escHtml(b.matchLabel)}</div>
+                                <div class="text-xs text-neutral-300">
+                                    ${isCreator ? 'Tu jugada:' : `Jugada de ${escHtml(b.creator)} (vos vas en contra):`}
+                                    <strong class="text-[#ffdf1b]">${escHtml(b.pickLabel)}</strong>
+                                    <span class="text-neutral-400"> • Rival 1v1: ${escHtml(rival)}</span>
+                                </div>
                             </div>
-                            <div class="text-sm font-bold text-white">${escHtml(b.matchLabel)}</div>
-                            <div class="text-xs text-neutral-300">
-                                Tu posición: <strong class="text-[#ffdf1b]">${isCreator ? escHtml(b.pickLabel) : 'En contra de ' + escHtml(b.pickLabel)}</strong>
-                                <span class="text-neutral-400"> • Rival 1v1: ${escHtml(rival)}</span>
+                            <div class="flex items-center justify-between sm:justify-end sm:space-x-4 text-xs shrink-0">
+                                <div class="text-left sm:text-right">
+                                    <div class="text-neutral-400">Tu apuesta: <strong class="text-white">${formatMoney(myStake)}</strong></div>
+                                    <div class="text-neutral-400">Pozo 1v1: <strong class="text-emerald-400">${formatMoney(pot)}</strong></div>
+                                </div>
+                                ${b.status === 'OPEN' && isCreator
+                                    ? `<button onclick="event.stopPropagation(); cancelOpenBet('${b.id}')" class="bg-rose-600/20 text-rose-300 border border-rose-500/40 px-3 py-1.5 rounded font-bold">Cancelar</button>`
+                                    : ''
+                                }
+                                ${b.status === 'OPEN' && !isCreator && b.targetUser === currentUser
+                                    ? `<div class="flex space-x-1.5" onclick="event.stopPropagation()">
+                                        <button onclick="rejectP2PBet('${b.id}')" class="bg-rose-600/20 text-rose-300 border border-rose-500/40 px-2.5 py-1.5 rounded font-bold">Rechazar</button>
+                                        <button onclick="acceptP2PBet('${b.id}')" class="bg-[#ffdf1b] text-[#111] px-3 py-1.5 rounded font-extrabold">Aceptar</button>
+                                       </div>`
+                                    : ''
+                                }
+                                <span class="text-neutral-300 font-bold text-xs bg-[#1e1e1e] border border-[#444] px-2.5 py-1.5 rounded">
+                                    ${isExpanded ? 'Ocultar ▲' : 'Ver detalle ▼'}
+                                </span>
                             </div>
                         </div>
-                        <div class="flex items-center justify-between sm:justify-end sm:space-x-5 text-xs">
-                            <div class="text-right">
-                                <div class="text-neutral-400">Tu apuesta: <strong class="text-white">${formatMoney(myStake)}</strong></div>
-                                <div class="text-neutral-400">Pozo 1v1: <strong class="text-emerald-400">${formatMoney(pot)}</strong></div>
+
+                        ${isExpanded ? `
+                            <div class="bg-[#202020] border-t border-[#383838] p-4 space-y-4">
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="font-extrabold uppercase tracking-wider text-emerald-400">
+                                        ${legs.length > 1 ? `Crear Apuesta / Combinada (${legs.length} selecciones)` : 'Detalle de la Selección'} • Cuota ${Number(b.odd || 1).toFixed(2)}
+                                    </span>
+                                    ${!isCreator ? `<span class="text-[11px] bg-amber-500/15 text-amber-300 px-2 py-0.5 rounded font-semibold">Vos ganás si falla al menos 1 selección</span>` : ''}
+                                </div>
+
+                                <div class="pt-1">
+                                    ${legs.map((leg, idx) => renderLegStepRow(leg, idx, legs.length, isCreator)).join('')}
+                                </div>
+
+                                ${matchScoreCards ? `
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                        ${matchScoreCards}
+                                    </div>
+                                ` : ''}
+
+                                <div class="bg-[#181818] border border-[#333] rounded-lg px-3.5 py-2.5 flex items-center justify-between text-xs">
+                                    <div>
+                                        <div class="text-neutral-400">Tu apuesta</div>
+                                        <div class="text-sm font-extrabold text-white">${formatMoney(myStake)}</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-neutral-400">${b.status === 'SETTLED' ? 'Premio liquidado' : 'Ganancia potencial (Pozo)'}</div>
+                                        <div class="text-sm font-extrabold text-[#00e676]">${formatMoney(pot)}</div>
+                                    </div>
+                                </div>
                             </div>
-                            ${b.status === 'OPEN' && isCreator
-                                ? `<button onclick="cancelOpenBet('${b.id}')" class="bg-rose-600/20 text-rose-300 border border-rose-500/40 px-3 py-1.5 rounded font-bold">Cancelar</button>`
-                                : ''
-                            }
-                            ${b.status === 'OPEN' && !isCreator && b.targetUser === currentUser
-                                ? `<div class="flex space-x-1.5">
-                                    <button onclick="rejectP2PBet('${b.id}')" class="bg-rose-600/20 text-rose-300 border border-rose-500/40 px-2.5 py-1.5 rounded font-bold">Rechazar</button>
-                                    <button onclick="acceptP2PBet('${b.id}')" class="bg-[#ffdf1b] text-[#111] px-3 py-1.5 rounded font-extrabold">Aceptar</button>
-                                   </div>`
-                                : ''
-                            }
-                        </div>
+                        ` : ''}
                     </div>
                 `;
             }).join('');
