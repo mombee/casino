@@ -281,7 +281,7 @@
                         <div id="live-now-list" class="divide-y divide-[#3d3135]"></div>
                     </div>
 
-                    <!-- Carrusel de Combinadas IA / Bet Boosts (reemplaza las 4 tarjetas de resumen) -->
+                    <!-- Carrusel de Combinadas IA / Bet Boosts -->
                     <div id="ai-boosts-section" class="space-y-2">
                         <div class="flex items-center justify-between px-0.5">
                             <div class="flex items-center space-x-2">
@@ -298,7 +298,7 @@
                         <div class="flex items-center justify-between shrink-0">
                             <div class="flex items-center space-x-2">
                                 <span class="w-2 h-2 rounded-full bg-[#027b5b]"></span>
-                                <span class="text-xs font-bold uppercase tracking-wider text-neutral-300">Jornadas y Fases:</span>
+                                <span class="text-xs font-bold uppercase tracking-wider text-neutral-300">Próximos Partidos:</span>
                             </div>
                             <span id="matches-progress-badge" class="sm:hidden bg-[#1e1e1e] border border-[#444] text-emerald-400 text-[11px] font-bold px-2 py-0.5 rounded">0 / 0</span>
                         </div>
@@ -308,7 +308,7 @@
                     <!-- Explicación corta de cuotas -->
                     <div class="hidden sm:flex bg-[#282828] border border-[#3a3a3a] rounded-lg px-4 py-2.5 flex-wrap items-center justify-between gap-2 text-xs text-neutral-300">
                         <div>
-                            <span class="text-[#ffdf1b] font-bold">Bet Builder y Combinadas 1v1:</span> Tocá cualquier partido para abrir el <strong>Crear Apuesta</strong> (1X2, Clasifica / Doble Oportunidad, Goles, MVP) o combiná varios partidos.
+                            <span class="text-[#ffdf1b] font-bold">Bet Builder y Combinadas 1v1:</span> Tocá cualquier partido próximo para abrir el <strong>Crear Apuesta</strong> (1X2, Clasifica / Doble Oportunidad, Goles, MVP) o combiná varios partidos.
                         </div>
                         <span id="matches-progress-badge-desktop" class="bg-[#1e1e1e] border border-[#444] text-emerald-400 font-bold px-2.5 py-0.5 rounded">0 / 0</span>
                     </div>
@@ -2986,44 +2986,7 @@
             };
         }
 
-        /* --- Summary Strip --- */
-        function renderSummaryStrip() {
-            const el = document.getElementById('summary-strip');
-            if (!el) return;
-
-            const played = [...tournamentState.matches, ...tournamentState.knockoutMatches].filter(m => m.played);
-            const goals = played.reduce((s, m) => s + (m.homeScore || 0) + (m.awayScore || 0), 0);
-            const avg = played.length ? (goals / played.length).toFixed(1) : '0.0';
-            const remaining = tournamentState.matches.filter(m => !m.played).length + tournamentState.knockoutMatches.filter(m => !m.played && m.homeId && m.awayId).length;
-
-            const goalsMap = {};
-            played.forEach(m => {
-                Object.entries(m.goals || {}).forEach(([pid, qty]) => {
-                    goalsMap[pid] = (goalsMap[pid] || 0) + qty;
-                });
-            });
-            let top = null;
-            Object.entries(goalsMap).forEach(([pid, qty]) => {
-                if (!top || qty > top.qty) top = { pid, qty };
-            });
-            const topPlayer = top && top.qty > 0 ? getPlayer(top.pid) : null;
-
-            const chip = (label, val, sub) => `
-                <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-3">
-                    <div class="text-[10px] uppercase tracking-wider text-neutral-400 font-semibold">${label}</div>
-                    <div class="font-sport text-2xl font-bold text-[#ffdf1b] leading-tight truncate">${val}</div>
-                    <div class="text-[11px] text-neutral-400 truncate">${sub}</div>
-                </div>
-            `;
-
-            el.innerHTML =
-                chip('Goles Totales', goals, `${played.length} partidos jugados`) +
-                chip('Promedio', avg, 'goles por partido') +
-                chip('Por Jugar', remaining, 'partidos activos') +
-                chip('Goleador', topPlayer ? escHtml(topPlayer.name) : '—', topPlayer ? `${top.qty} goles • ${topPlayer.team.code}` : 'sin goles');
-        }
-
-        /* --- Partidos y Cuotas (Fechas + Fases de Eliminación) --- */
+        /* --- Partidos y Cuotas (Solo Próximos y En Vivo en el menú inicial) --- */
         function renderLiveNowSection(statsMap, openBets) {
             const section = document.getElementById('live-now-section');
             const listEl = document.getElementById('live-now-list');
@@ -3073,11 +3036,11 @@
             return `
                 <div class="bg-[#282828] border border-dashed border-[#4a4a4a] rounded-lg p-8 text-center space-y-2">
                     <div class="inline-block bg-amber-500/15 border border-amber-500/40 text-amber-300 text-[11px] font-bold uppercase px-2.5 py-0.5 rounded">
-                        ${escHtml(stageLabel)} • Pendiente
+                        ${escHtml(stageLabel)} • Próximamente
                     </div>
                     <div class="text-sm sm:text-base font-bold text-white">Los cruces de ${escHtml(stageLabel)} todavía no se sortearon</div>
                     <p class="text-xs text-neutral-400 max-w-md mx-auto">
-                        Esta fase aún no está definida. Apenas finalice la instancia anterior y se definan los cruces en el torneo, aparecerán acá automáticamente con sus cuotas de <strong>1X2</strong> y <strong>Clasifica</strong>.
+                        Apenas finalice la instancia anterior y se definan los cruces en el torneo, aparecerán acá automáticamente con sus cuotas de <strong>1X2</strong> y <strong>Clasifica</strong>.
                     </p>
                 </div>
             `;
@@ -3089,19 +3052,24 @@
             const badge = document.getElementById('matches-progress-badge');
             const badgeDesktop = document.getElementById('matches-progress-badge-desktop');
 
+            // Solo partidos próximos (no finalizados) para el menú inicial
+            const upcomingRegular = tournamentState.matches.filter(m => !m.played && m.homeId && m.awayId);
+            const upcomingKo = tournamentState.knockoutMatches.filter(m => !m.played && m.homeId && m.awayId);
+            const totalUpcoming = upcomingRegular.length + upcomingKo.length;
+
             const validKoMatches = tournamentState.knockoutMatches.filter(m => m.homeId && m.awayId);
             const totalAll = tournamentState.matches.length + validKoMatches.length;
             const playedAll = tournamentState.matches.filter(m => m.played).length + validKoMatches.filter(m => m.played).length;
 
-            const progText = `${playedAll} / ${totalAll} Jugados`;
-            if (badge) badge.textContent = progText;
+            const progText = `${totalUpcoming} Próximo${totalUpcoming === 1 ? '' : 's'} (${playedAll}/${totalAll} jugados)`;
+            if (badge) badge.textContent = `${totalUpcoming} Próximos`;
             if (badgeDesktop) badgeDesktop.textContent = progText;
 
             const statsMap = getAllTeamsStatsMap();
             const openBets = Object.values(betsMap).filter(b => b.status === 'OPEN');
             renderLiveNowSection(statsMap, openBets);
 
-            if (tournamentState.matches.length === 0 && tournamentState.knockoutMatches.length === 0) {
+            if (totalAll === 0) {
                 if (barEl) barEl.innerHTML = '';
                 listEl.innerHTML = `
                     <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-8 text-center text-neutral-400 text-sm">
@@ -3111,28 +3079,33 @@
                 return;
             }
 
-            // Construir barra de filtros: Todas + Fechas 1, 2, 3... + Fases de Eliminación (Cuartos, Semifinales, Final)
-            const rounds = Array.from(new Set(tournamentState.matches.map(m => m.round || 1))).sort((a, b) => a - b);
-            const koStages = getKnockoutStagesMeta();
-            const validFilterKeys = ['ALL', ...rounds, ...koStages.map(s => s.key)];
+            // Construir barra de filtros solo con las jornadas y fases que aún tienen partidos por jugar (o pendientes de sorteo)
+            const activeRounds = Array.from(new Set(upcomingRegular.map(m => m.round || 1))).sort((a, b) => a - b);
+            const koStages = getKnockoutStagesMeta().filter(st => {
+                const allStage = tournamentState.knockoutMatches.filter(m => m.stage === st.stage && m.homeId && m.awayId);
+                // Mostrar la fase eliminatoria si todavía no se sorteó o si tiene partidos sin jugar
+                return allStage.length === 0 || allStage.some(m => !m.played);
+            });
+
+            const validFilterKeys = ['ALL', ...activeRounds, ...koStages.map(s => s.key)];
             if (!validFilterKeys.includes(selectedRoundFilter)) selectedRoundFilter = 'ALL';
 
             barEl.innerHTML = `
                 <button onclick="setRoundFilter('ALL')" class="shrink-0 text-xs px-3 py-1.5 rounded font-bold transition ${selectedRoundFilter === 'ALL' ? 'bg-[#027b5b] text-white' : 'bg-[#383838] text-neutral-300 hover:bg-[#444]'}">
-                    Todas
+                    Todos (${totalUpcoming})
                 </button>
-            ` + rounds.map(r => `
+            ` + activeRounds.map(r => `
                 <button onclick="setRoundFilter(${r})" class="shrink-0 text-xs px-3 py-1.5 rounded font-bold transition ${selectedRoundFilter === r ? 'bg-[#ffdf1b] text-[#111]' : 'bg-[#383838] text-neutral-300 hover:bg-[#444]'}">
                     Fecha ${r}
                 </button>
             `).join('') + (koStages.length ? `<span class="text-neutral-600 px-0.5 select-none">|</span>` : '') + koStages.map(st => {
-                const stMatches = tournamentState.knockoutMatches.filter(m => m.stage === st.stage && m.homeId && m.awayId);
-                const isDrawn = stMatches.length > 0;
+                const stUpcoming = upcomingKo.filter(m => m.stage === st.stage);
+                const isDrawn = stUpcoming.length > 0;
                 const active = selectedRoundFilter === st.key;
                 return `
                     <button onclick="setRoundFilter('${st.key}')" class="shrink-0 text-xs px-3 py-1.5 rounded font-bold transition flex items-center space-x-1 ${active ? 'bg-[#ffdf1b] text-[#111]' : isDrawn ? 'bg-[#027b5b]/30 border border-[#027b5b] text-emerald-300 hover:bg-[#027b5b]/50' : 'bg-[#303030] text-neutral-400 hover:bg-[#3d3d3d]'}">
                         <span>${escHtml(st.label)}</span>
-                        ${!isDrawn ? `<span class="w-1.5 h-1.5 rounded-full bg-amber-400" title="Aún no sorteada"></span>` : ''}
+                        ${!isDrawn ? `<span class="w-1.5 h-1.5 rounded-full bg-amber-400" title="Próximamente"></span>` : ''}
                     </button>
                 `;
             }).join('');
@@ -3142,7 +3115,7 @@
                 const stageMeta = koStages.find(s => s.key === selectedRoundFilter);
                 const stageCode = stageMeta ? stageMeta.stage : selectedRoundFilter.replace('KO_', '');
                 const stageLabel = stageMeta ? stageMeta.label : 'Fase Eliminatoria';
-                const stageMatches = tournamentState.knockoutMatches.filter(m => m.stage === stageCode && m.homeId && m.awayId);
+                const stageMatches = upcomingKo.filter(m => m.stage === stageCode);
 
                 if (stageMatches.length === 0) {
                     listEl.innerHTML = renderKnockoutNotDrawnCard(stageLabel);
@@ -3152,7 +3125,7 @@
                 listEl.innerHTML = `
                     <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg overflow-hidden">
                         <div class="bg-[#027b5b] px-4 py-2 border-b border-[#02382c] flex items-center justify-between">
-                            <span class="text-xs font-bold uppercase tracking-wider text-white">${escHtml(stageLabel)} • Eliminación Directa</span>
+                            <span class="text-xs font-bold uppercase tracking-wider text-white">${escHtml(stageLabel)} • Próximos Cruces</span>
                             <span class="text-[10px] font-bold uppercase text-[#ffdf1b]">1X2 (90') y Clasifica</span>
                         </div>
                         <div class="divide-y divide-[#383838]">
@@ -3163,19 +3136,23 @@
                 return;
             }
 
-            // Caso 2: Fechas de Fase Regular (Todas o Fecha 1, 2, 3...)
+            // Caso 2: Fechas de Fase Regular (solo partidos no finalizados)
             const filtered = selectedRoundFilter === 'ALL'
-                ? tournamentState.matches
-                : tournamentState.matches.filter(m => (m.round || 1) === selectedRoundFilter);
+                ? upcomingRegular
+                : upcomingRegular.filter(m => (m.round || 1) === selectedRoundFilter);
 
             const shownRounds = Array.from(new Set(filtered.map(m => m.round || 1))).sort((a, b) => a - b);
 
-            let html = shownRounds.map(r => {
+            let html = shownRounds.map((r, idx) => {
                 const rMatches = filtered.filter(m => (m.round || 1) === r);
+                const isNextRound = selectedRoundFilter === 'ALL' && idx === 0;
                 return `
-                    <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg overflow-hidden">
-                        <div class="bg-[#333] px-4 py-2 border-b border-[#444] flex items-center justify-between">
-                            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Fecha ${r}</span>
+                    <div class="bg-[#282828] border ${isNextRound ? 'border-[#027b5b]' : 'border-[#3a3a3a]'} rounded-lg overflow-hidden">
+                        <div class="${isNextRound ? 'bg-[#027b5b]/35' : 'bg-[#333]'} px-4 py-2 border-b border-[#444] flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Fecha ${r}</span>
+                                ${isNextRound ? `<span class="bg-[#ffdf1b] text-[#111] text-[10px] font-extrabold uppercase px-2 py-0.5 rounded">A Continuación</span>` : ''}
+                            </div>
                             <div class="hidden sm:grid grid-cols-3 gap-2 w-60 text-center text-[10px] font-bold uppercase text-neutral-400">
                                 <span>1 (Local)</span>
                                 <span>X (Empate)</span>
@@ -3189,22 +3166,159 @@
                 `;
             }).join('');
 
-            // Si está en "Todas" y ya hay partidos eliminatorios sorteados, mostrarlos al final
-            if (selectedRoundFilter === 'ALL' && validKoMatches.length > 0) {
+            // Si está en "Todos" y ya hay partidos eliminatorios próximos sorteados, mostrarlos
+            if (selectedRoundFilter === 'ALL' && upcomingKo.length > 0) {
                 html += `
-                    <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg overflow-hidden">
+                    <div class="bg-[#282828] border border-[#027b5b] rounded-lg overflow-hidden">
                         <div class="bg-[#027b5b] px-4 py-2 border-b border-[#02382c] flex items-center justify-between">
-                            <span class="text-xs font-bold uppercase tracking-wider text-white">Fase de Eliminación</span>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs font-bold uppercase tracking-wider text-white">Fase de Eliminación • Próximos</span>
+                                <span class="bg-[#ffdf1b] text-[#111] text-[10px] font-extrabold uppercase px-2 py-0.5 rounded">En Juego / Próximos</span>
+                            </div>
                             <span class="text-[10px] font-bold uppercase text-[#ffdf1b]">1X2 (90') y Clasifica</span>
                         </div>
                         <div class="divide-y divide-[#383838]">
-                            ${validKoMatches.map(m => renderBet365MatchRow(m, true, statsMap, openBets)).join('')}
+                            ${upcomingKo.map(m => renderBet365MatchRow(m, true, statsMap, openBets)).join('')}
                         </div>
                     </div>
                 `;
             }
 
+            // Si no queda ningún partido próximo por jugar (pero aún faltan sortear eliminatorias o el torneo terminó)
+            if (!html) {
+                if (koStages.length > 0) {
+                    html = renderKnockoutNotDrawnCard(koStages[0].label);
+                } else {
+                    html = `
+                        <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-8 text-center space-y-2">
+                            <div class="inline-block bg-emerald-500/20 text-emerald-300 text-xs font-extrabold uppercase px-3 py-1 rounded">Torneo Completado</div>
+                            <div class="text-sm font-bold text-white">Todos los partidos del torneo ya finalizaron</div>
+                            <p class="text-xs text-neutral-400">Podés revisar la tabla final, goleadores y tus apuestas liquidadas en las pestañas superiores.</p>
+                        </div>
+                    `;
+                }
+            }
+
             listEl.innerHTML = html;
+        }
+
+        /* --- Bandeja de Desafíos 1v1 Pendientes (Mini caja + Vista completa) --- */
+        function renderOpenMarket() {
+            const openList = Object.values(betsMap)
+                .filter(b => b.status === 'OPEN')
+                .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+            const incomingForMe = currentUser
+                ? openList.filter(b => b.targetUser === currentUser)
+                : [];
+            const outgoingByMe = currentUser
+                ? openList.filter(b => b.creator === currentUser)
+                : [];
+
+            // Actualizar contadores de notificación
+            const desktopBadge = document.getElementById('open-bets-badge');
+            const mobileBadge = document.getElementById('mobile-open-bets-badge');
+            const badgeCount = incomingForMe.length;
+            if (desktopBadge) desktopBadge.textContent = badgeCount;
+            if (mobileBadge) {
+                mobileBadge.textContent = badgeCount;
+                mobileBadge.classList.toggle('hidden', badgeCount === 0);
+            }
+
+            // 1. Mini caja lateral en vista Partidos
+            const miniBox = document.getElementById('mini-open-bets');
+            if (miniBox) {
+                if (!currentUser) {
+                    miniBox.innerHTML = `<div class="text-neutral-400 text-center py-2">Iniciá sesión para ver desafíos 1v1.</div>`;
+                } else if (incomingForMe.length === 0) {
+                    miniBox.innerHTML = `<div class="text-neutral-400 text-center py-2">No tenés desafíos recibidos pendientes.</div>`;
+                } else {
+                    miniBox.innerHTML = incomingForMe.slice(0, 3).map(b => `
+                        <div class="bg-[#1f1f1f] border border-[#383838] rounded p-2.5 space-y-1.5">
+                            <div class="flex items-center justify-between">
+                                <span class="font-bold text-emerald-400">De: ${escHtml(b.creator)}</span>
+                                <span class="text-[#ffdf1b] font-extrabold">Pozo ${formatMoney(b.creatorStake + b.takerStake)}</span>
+                            </div>
+                            <div class="text-white font-semibold truncate">${escHtml(b.pickLabel)}</div>
+                            <div class="flex items-center justify-between pt-1">
+                                <span class="text-neutral-400">Ponés: <strong class="text-white">${formatMoney(b.takerStake)}</strong></span>
+                                <div class="flex space-x-1">
+                                    <button onclick="rejectP2PBet('${b.id}')" class="bg-rose-600/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded font-bold">No</button>
+                                    <button onclick="acceptP2PBet('${b.id}')" class="bg-[#ffdf1b] text-[#111] px-2.5 py-0.5 rounded font-extrabold">Aceptar</button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            // 2. Vista completa Desafíos 1v1
+            const marketEl = document.getElementById('market-bets-list');
+            if (!marketEl) return;
+
+            if (!currentUser) {
+                marketEl.innerHTML = `
+                    <div class="md:col-span-2 bg-[#282828] border border-[#3a3a3a] rounded-lg p-8 text-center space-y-3">
+                        <div class="text-sm text-neutral-300">Iniciá sesión para ver y aceptar desafíos 1v1.</div>
+                        <button onclick="openAuthModal('login')" class="bg-[#ffdf1b] text-[#111] font-bold text-xs px-4 py-2 rounded">Iniciar Sesión</button>
+                    </div>
+                `;
+                return;
+            }
+
+            const relevant = [...incomingForMe, ...outgoingByMe];
+            if (relevant.length === 0) {
+                marketEl.innerHTML = `
+                    <div class="md:col-span-2 bg-[#282828] border border-[#3a3a3a] rounded-lg p-8 text-center text-neutral-400 text-sm">
+                        No tenés desafíos 1v1 pendientes en este momento. Elegí una cuota en <strong>Partidos</strong> para desafiar a un rival.
+                    </div>
+                `;
+                return;
+            }
+
+            marketEl.innerHTML = relevant.map(b => {
+                const isIncoming = b.targetUser === currentUser;
+                const pot = b.creatorStake + b.takerStake;
+                return `
+                    <div class="bg-[#282828] border ${isIncoming ? 'border-[#027b5b]' : 'border-[#3a3a3a]'} rounded-lg p-4 space-y-3">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="px-2 py-0.5 rounded font-extrabold uppercase ${isIncoming ? 'bg-[#027b5b] text-white' : 'bg-amber-500/20 text-amber-300'}">
+                                ${isIncoming ? `Recibido de ${escHtml(b.creator)}` : `Enviado a ${escHtml(b.targetUser)}`}
+                            </span>
+                            <span class="text-neutral-400 font-semibold">${escHtml(b.meta)}</span>
+                        </div>
+                        <div>
+                            <div class="text-xs text-neutral-400">${escHtml(b.matchLabel)}</div>
+                            <div class="text-sm font-bold text-white mt-0.5">
+                                ${isIncoming ? `${escHtml(b.creator)} apuesta:` : 'Tu jugada:'}
+                                <span class="text-[#ffdf1b]">${escHtml(b.pickLabel)}</span>
+                            </div>
+                        </div>
+                        <div class="bg-[#1f1f1f] border border-[#363636] rounded p-3 flex items-center justify-between text-xs">
+                            <div>
+                                <div class="text-neutral-400">${isIncoming ? 'Vos ponés (en contra)' : 'Tu apuesta'}</div>
+                                <div class="text-sm font-extrabold text-white">${formatMoney(isIncoming ? b.takerStake : b.creatorStake)}</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-neutral-400">Cuota</div>
+                                <div class="text-sm font-extrabold text-[#ffdf1b]">${Number(b.odd || 1).toFixed(2)}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-neutral-400">Pozo Total 1v1</div>
+                                <div class="text-sm font-extrabold text-[#00e676]">${formatMoney(pot)}</div>
+                            </div>
+                        </div>
+                        <div class="flex justify-end space-x-2">
+                            ${isIncoming ? `
+                                <button onclick="rejectP2PBet('${b.id}')" class="bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 px-3.5 py-2 rounded text-xs font-bold">Rechazar</button>
+                                <button onclick="acceptP2PBet('${b.id}')" class="bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] px-4 py-2 rounded text-xs font-extrabold">Aceptar Desafío</button>
+                            ` : `
+                                <button onclick="cancelOpenBet('${b.id}')" class="bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 px-3.5 py-2 rounded text-xs font-bold">Cancelar Envío</button>
+                            `}
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         /* --- Sección Apuestas Especiales del Torneo --- */
@@ -3401,7 +3515,7 @@
             `;
         }
 
-        /* --- Combinadas IA / Bet Boosts (reemplaza las 4 tarjetas superiores) --- */
+        /* --- Combinadas IA / Bet Boosts --- */
         let cachedAiBoosts = [];
 
         function applyAiBoostCombo(boostIndex) {
@@ -3430,7 +3544,6 @@
             let stageContext = 'Próximos partidos';
 
             if (pendingKo.length > 0) {
-                // Agrupar por la instancia eliminatoria activa (ej. Cuartos, Semis, Final)
                 const firstStage = pendingKo[0].stage;
                 targetMatches = pendingKo.filter(m => m.stage === firstStage);
                 stageContext = targetMatches[0].stageName || 'Eliminación Directa';
@@ -3441,7 +3554,6 @@
             }
 
             if (targetMatches.length === 0) {
-                // Si no hay partidos pendientes, armar especiales del torneo para mantener mínimo 4 tarjetas
                 const sp = computeTournamentSpecials();
                 const specials = [];
                 if (sp.championOptions[0]) {
@@ -3479,7 +3591,6 @@
                 return { stageContext: 'Torneo Finalizado', combos: specials };
             }
 
-            // Analizar cada partido próximo con las cuotas y proyecciones de IA
             const analyzed = targetMatches.map(m => {
                 const home = getTeam(m.homeId);
                 const away = getTeam(m.awayId);
@@ -3508,7 +3619,6 @@
             const combos = [];
             const isFinal = targetMatches.length === 1 && targetMatches[0].stage === 'F';
 
-            // 1. COMBINADA DE FAVORITOS (en eliminación usa "Clasifica", en grupos usa "Gana")
             const favLegs = analyzed.map(item => ({
                 category: 'MATCH',
                 matchId: item.m.id,
@@ -3536,7 +3646,6 @@
                 popularity: 480 + analyzed.length * 65
             });
 
-            // 2. FAVORITOS + MÁS DE 3.5 GOLES EN TODOS LOS PARTIDOS (exactamente como pidió el usuario)
             const favOverLegs = [];
             analyzed.forEach(item => {
                 favOverLegs.push({
@@ -3581,7 +3690,6 @@
                 popularity: 615 + analyzed.length * 40
             });
 
-            // 3. LLUVIA DE GOLES (Más de 4.5 goles en los partidos)
             const highGoalsLegs = analyzed.map(item => ({
                 category: 'MATCH',
                 matchId: item.m.id,
@@ -3607,7 +3715,6 @@
                 popularity: 390 + analyzed.length * 35
             });
 
-            // 4. GOLEADORES EN RACHA (cada figura mete +0.5 o +1.5 goles en su partido)
             const scorersLegs = analyzed
                 .filter(item => item.topPlayer)
                 .map(item => {
@@ -3642,7 +3749,6 @@
                 });
             }
 
-            // 5. GOLPE EN LA MESA (Sorpresa: gana/clasifica el equipo con menos chances en el duelo más parejo)
             const closestItem = [...analyzed].sort((a, b) => Math.abs(a.odds.home - a.odds.away) - Math.abs(b.odds.home - b.odds.away))[0];
             if (closestItem) {
                 const upsetPick = closestItem.favPick === 'HOME' ? 'AWAY' : 'HOME';
