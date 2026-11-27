@@ -3207,6 +3207,73 @@
             listEl.innerHTML = html;
         }
 
+        /* --- Sección Apuestas Especiales del Torneo --- */
+        function renderSpecials() {
+            const container = document.getElementById('specials-container');
+            const badge = document.getElementById('specials-status-badge');
+            if (!container) return;
+
+            const done = isTournamentFinished();
+            if (badge) {
+                badge.textContent = done ? 'Torneo Finalizado' : 'Abiertas para Desafíos 1v1';
+            }
+
+            if (!tournamentState.teams.length) {
+                container.innerHTML = `<div class="lg:col-span-2 bg-[#282828] border border-[#3a3a3a] rounded-lg p-8 text-center text-neutral-400 text-sm">Todavía no hay selecciones inscritas en el torneo.</div>`;
+                return;
+            }
+
+            const sp = computeTournamentSpecials();
+
+            const renderSpecialBox = (title, subtitle, marketType, groupName, options, prefixText) => `
+                <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg overflow-hidden flex flex-col">
+                    <div class="bg-[#027b5b] px-4 py-3 flex items-center justify-between">
+                        <div>
+                            <h3 class="text-sm font-bold text-white uppercase tracking-wider">${escHtml(title)}</h3>
+                            <p class="text-[11px] text-emerald-100">${escHtml(subtitle)}</p>
+                        </div>
+                        <span class="text-[10px] bg-black/25 text-[#ffdf1b] font-bold px-2 py-0.5 rounded">${sp.anyPlayed ? 'DINÁMICA' : 'APERTURA'}</span>
+                    </div>
+                    <div class="p-3 space-y-2 max-h-96 overflow-y-auto">
+                        ${options.map(opt => {
+                            const label = `${prefixText}: ${opt.name}`;
+                            return `
+                                <div class="bg-[#1f1f1f] border border-[#363636] rounded px-3 py-2 flex items-center justify-between gap-2">
+                                    <div class="flex items-center space-x-2.5 min-w-0">
+                                        ${flagMarkup(opt.team)}
+                                        <div class="min-w-0">
+                                            <div class="text-xs sm:text-sm font-bold text-white truncate">${escHtml(opt.name)}</div>
+                                            <div class="text-[10px] text-neutral-400 truncate">${escHtml(opt.sub)}</div>
+                                        </div>
+                                    </div>
+                                    <button ${done ? 'disabled' : ''} onclick="selectSpecialBet('${marketType}', ${groupName ? `'${escHtml(groupName)}'` : 'null'}, '${opt.targetId}', ${opt.odd}, '${escHtml(label)}')" class="odd-btn rounded px-3 py-1.5 text-center shrink-0 disabled:opacity-40">
+                                        <span class="odd-val text-xs sm:text-sm">${opt.odd.toFixed(2)}</span>
+                                    </button>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+
+            const groupsHtml = sp.groupWinners.map(gw =>
+                renderSpecialBox(
+                    `1° Puesto — ${gw.groupName}`,
+                    '¿Qué selección termina primera en esta zona?',
+                    'GROUP_WINNER',
+                    gw.groupName,
+                    gw.options,
+                    `1° de ${gw.groupName}`
+                )
+            ).join('');
+
+            container.innerHTML =
+                renderSpecialBox('Campeón del Mundial 3v3', '¿Qué selección levanta la copa?', 'CHAMPION', null, sp.championOptions, 'Campeón') +
+                renderSpecialBox('Máximo Goleador (Bota de Oro)', `Todos los jugadores (${sp.topScorerOptions.length}) • ¿Quién mete más goles?`, 'TOP_SCORER', null, sp.topScorerOptions, 'Goleador del Torneo') +
+                renderSpecialBox('Mejor Jugador (Más MVPs)', `Todos los jugadores (${sp.topMvpOptions.length}) • ¿Quién gana más premios MVP?`, 'TOP_MVP', null, sp.topMvpOptions, 'Más MVPs') +
+                groupsHtml;
+        }
+
         function formatLiveGoalScorers(m, team) {
             if (!m || !m.goals || !team || !Array.isArray(team.players)) return '';
             const scorers = [];
