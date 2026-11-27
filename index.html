@@ -6,14 +6,14 @@
     <title>bet3v3 — Protocasino P2P Mundial 26</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Favicon (ícono de la pestaña) -->
-<link rel="icon" type="image/png" href="logobet.png">
+    <link rel="icon" type="image/png" href="logobet.png">
 
-<!-- Ícono para celulares -->
-<link rel="apple-touch-icon" href="logobet.png">
+    <!-- Ícono para celulares -->
+    <link rel="apple-touch-icon" href="logobet.png">
 
-<!-- Nombre de la aplicación -->
-<meta name="apple-mobile-web-app-title" content="bet3v3">
-<meta name="application-name" content="bet3v3">
+    <!-- Nombre de la aplicación -->
+    <meta name="apple-mobile-web-app-title" content="bet3v3">
+    <meta name="application-name" content="bet3v3">
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- SDK de Firebase (App + Realtime Database) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -284,12 +284,12 @@
                     <!-- Resumen rápido del torneo -->
                     <div id="summary-strip" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
 
-                    <!-- Barra de filtros de fechas -->
+                    <!-- Barra de filtros de fechas y fases de eliminación -->
                     <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between shrink-0">
                             <div class="flex items-center space-x-2">
                                 <span class="w-2 h-2 rounded-full bg-[#027b5b]"></span>
-                                <span class="text-xs font-bold uppercase tracking-wider text-neutral-300">Jornadas:</span>
+                                <span class="text-xs font-bold uppercase tracking-wider text-neutral-300">Jornadas y Fases:</span>
                             </div>
                             <span id="matches-progress-badge" class="sm:hidden bg-[#1e1e1e] border border-[#444] text-emerald-400 text-[11px] font-bold px-2 py-0.5 rounded">0 / 0</span>
                         </div>
@@ -299,7 +299,7 @@
                     <!-- Explicación corta de cuotas -->
                     <div class="hidden sm:flex bg-[#282828] border border-[#3a3a3a] rounded-lg px-4 py-2.5 flex-wrap items-center justify-between gap-2 text-xs text-neutral-300">
                         <div>
-                            <span class="text-[#ffdf1b] font-bold">Bet Builder y Combinadas 1v1:</span> Tocá cualquier partido para abrir el <strong>Crear Apuesta</strong> (1X2, Doble Oportunidad, Goles, MVP) o combiná varios partidos.
+                            <span class="text-[#ffdf1b] font-bold">Bet Builder y Combinadas 1v1:</span> Tocá cualquier partido para abrir el <strong>Crear Apuesta</strong> (1X2, Clasifica / Doble Oportunidad, Goles, MVP) o combiná varios partidos.
                         </div>
                         <span id="matches-progress-badge-desktop" class="bg-[#1e1e1e] border border-[#444] text-emerald-400 font-bold px-2.5 py-0.5 rounded">0 / 0</span>
                     </div>
@@ -324,7 +324,7 @@
 
                         <!-- Sin selección -->
                         <div id="slip-empty" class="p-6 text-center space-y-2">
-                            <div class="text-neutral-400 text-xs">Tocá un partido para abrir el <strong>Bet Builder</strong> o elegí cualquier cuota (1X2, Doble Oportunidad, Goles, MVP) para armar tu apuesta simple o combinada 1v1.</div>
+                            <div class="text-neutral-400 text-xs">Tocá un partido para abrir el <strong>Bet Builder</strong> o elegí cualquier cuota (1X2, Clasifica, Goles, MVP) para armar tu apuesta simple o combinada 1v1.</div>
                         </div>
 
                         <!-- Con selección -->
@@ -537,7 +537,7 @@
         <div id="view-knockout" class="view-section hidden space-y-5">
             <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-4">
                 <h2 class="text-lg font-bold text-white">Fase Final — Eliminatorias</h2>
-                <p class="text-xs text-neutral-400">Cuadro eliminatorio en vivo. En esta fase las apuestas definen qué equipo avanza (incluye penales).</p>
+                <p class="text-xs text-neutral-400">Cuadro eliminatorio en vivo. Podés apostar al resultado en tiempo reglamentario (1X2) o a qué equipo clasifica/avanza de ronda (incluye penales).</p>
             </div>
 
             <div id="champion-banner" class="hidden bg-gradient-to-r from-[#005440] via-[#027b5b] to-[#005440] border-2 border-[#ffdf1b] rounded-lg p-6 text-center space-y-1 shadow-xl">
@@ -598,7 +598,7 @@
             <!-- Barra de pestañas de mercados dentro del partido -->
             <div class="bg-[#1c1c1c] border-b border-[#3a3a3a] px-4 py-2 flex items-center space-x-2 overflow-x-auto text-xs shrink-0">
                 <button onclick="setBetBuilderTab('ALL')" id="bb-tab-ALL" class="px-3 py-1 rounded font-bold bg-[#027b5b] text-white whitespace-nowrap">Todos</button>
-                <button onclick="setBetBuilderTab('RESULT')" id="bb-tab-RESULT" class="px-3 py-1 rounded font-semibold bg-[#303030] text-neutral-300 whitespace-nowrap">Resultado y Doble Op.</button>
+                <button onclick="setBetBuilderTab('RESULT')" id="bb-tab-RESULT" class="px-3 py-1 rounded font-semibold bg-[#303030] text-neutral-300 whitespace-nowrap">Resultado / Clasifica</button>
                 <button onclick="setBetBuilderTab('GOALS')" id="bb-tab-GOALS" class="px-3 py-1 rounded font-semibold bg-[#303030] text-neutral-300 whitespace-nowrap">Total de Goles</button>
                 <button onclick="setBetBuilderTab('PLAYERS')" id="bb-tab-PLAYERS" class="px-3 py-1 rounded font-semibold bg-[#303030] text-neutral-300 whitespace-nowrap">Goleadores</button>
                 <button onclick="setBetBuilderTab('MVP')" id="bb-tab-MVP" class="px-3 py-1 rounded font-semibold bg-[#303030] text-neutral-300 whitespace-nowrap">MVP del Partido</button>
@@ -802,7 +802,7 @@
         let betsMap = {};  // betId -> { id, category, matchId, isKnockout, marketType, pick, targetId, line, pickLabel, odd, creator, creatorStake, targetUser, taker, takerStake, status, winnerUser, createdAt }
         let currentUser = null; // username string
 
-        let selectedRoundFilter = 'ALL';
+        let selectedRoundFilter = 'ALL'; // 'ALL' | number (1, 2, 3...) | 'KO_QF' | 'KO_SF' | 'KO_F'
         let myBetsFilter = 'ALL';
         let expandedBetId = null;
         // Lista de patas (selecciones) en el boleto actual. Soporta Simple (1 pata) y Combinada / Bet Builder (2+ patas)
@@ -1287,8 +1287,13 @@
                 if (!m || m.played) return false;
 
                 if (leg.marketType === '1X2') {
-                    const o = computeMatchOdds(m, m._ko);
+                    // 1X2 siempre calcula tiempo reglamentario (3 vías)
+                    const o = computeMatchOdds(m, false);
                     leg.odd = leg.pick === 'HOME' ? o.home : (leg.pick === 'AWAY' ? o.away : o.draw);
+                } else if (leg.marketType === 'QUALIFY') {
+                    // Clasifica / Avanza de ronda (2 vías)
+                    const o = computeMatchOdds(m, true);
+                    leg.odd = leg.pick === 'HOME' ? o.home : o.away;
                 } else {
                     const p = computeMatchPropOdds(m);
                     if (leg.marketType === 'DOUBLE_CHANCE') {
@@ -1313,11 +1318,10 @@
 
         /**
          * Calcula cuotas P2P realistas para 3v3 de muchos goles:
-         * - En la previa ajusta las cuotas de forma gradual según puntos, diferencia de gol,
-         *   racha y la calidad de los rivales enfrentados (evitando saltos exagerados como x5 por 1 derrota).
-         * - En vivo incorpora la diferencia de goles actual y el tiempo restante del partido.
+         * - twoWay = false (por defecto): mercado 1X2 (Local - Empate - Visitante en tiempo reglamentario).
+         * - twoWay = true: mercado Clasifica / Avanza de ronda (Local vs Visitante, incluye alargue/penales).
          */
-        function computeMatchOdds(match, isKnockout) {
+        function computeMatchOdds(match, twoWay = false) {
             const statsMap = getAllTeamsStatsMap();
             const h = statsMap[match.homeId];
             const a = statsMap[match.awayId];
@@ -1334,7 +1338,7 @@
             if (!hasHistory && !isLive) {
                 const seedBase = `${match.id}_${match.homeId}_${match.awayId}`;
                 const tilt = seededJitter(seedBase + '_tilt', 0.16);
-                if (isKnockout) {
+                if (twoWay) {
                     const homeOdd = clampOdd(1.92 + tilt, 1.72, 2.16);
                     const awayOdd = clampOdd(1.92 - tilt, 1.72, 2.16);
                     const pH = Math.round((1 / homeOdd) / ((1 / homeOdd) + (1 / awayOdd)) * 100);
@@ -1371,8 +1375,8 @@
             // Fuerza de cada equipo suavizada (evita extremos irreales tras pocos partidos)
             const baseTeamRating = (s) => {
                 if (!s || s.pj === 0) return 50;
-                const confidence = Math.min(1, s.pj / 3); // Escala gradualmente en las primeras fechas
-                const ppg = s.pts / s.pj; // 0..3
+                const confidence = Math.min(1, s.pj / 3);
+                const ppg = s.pts / s.pj;
                 const gdpg = Math.max(-3.0, Math.min(3.0, s.dg / s.pj));
                 const recent = (s.form || []).slice(-3);
                 const formAvg = recent.length
@@ -1382,7 +1386,6 @@
                 return 50 + rawDelta * confidence;
             };
 
-            // Ajuste por fuerza de los rivales contra los que ya jugó cada equipo (SOS)
             const strengthOfSchedule = (teamId) => {
                 const playedVs = tournamentState.matches.filter(m => m.played && (m.homeId === teamId || m.awayId === teamId));
                 if (!playedVs.length) return 0;
@@ -1397,22 +1400,19 @@
             const ratingH = baseTeamRating(h) + strengthOfSchedule(match.homeId);
             const ratingA = baseTeamRating(a) + strengthOfSchedule(match.awayId);
 
-            // Diferencia previa moderada: 1 victoria vs 1 derrota da cuotas cercanas a ~1.95 vs ~2.85 (no x5)
             const preMatchJitter = seededJitter(`${match.id}_${match.homeId}_${match.awayId}`, 1.2);
             let diff = ((ratingH - ratingA) + preMatchJitter) * (0.45 + 0.55 * remFrac);
 
             const goalDiffLive = liveHome - liveAway;
-            // En vivo sí escala según goles de ventaja y tiempo restante
             const timeMultiplier = 1 + Math.pow(elapsedFrac, 1.35) * 2.3;
             diff += goalDiffLive * 20 * timeMultiplier;
 
             const homeShare = 1 / (1 + Math.exp(-diff / 22));
 
-            // Topes máximos en previa: en fase regular hasta ~3.60 (en vivo sí puede subir hasta 12.00)
             const preMaxWin = isLive ? 12.00 : 3.65;
             const preMinWin = isLive ? 1.06 : 1.55;
 
-            if (isKnockout) {
+            if (twoWay) {
                 const pHome = Math.max(0.08, Math.min(0.92, homeShare));
                 const pAway = 1 - pHome;
                 return {
@@ -1463,15 +1463,12 @@
             const hasHistory = (h && h.pj >= 1) || (a && a.pj >= 1);
             const isLive = !match.played && Boolean(match.isLive || liveGoalsNow > 0 || remFrac < 0.99);
 
-            // En fútbol 3v3 se hacen bastantes goles (promedio base ~5.6 goles por partido)
             const avgGoalsTeam = (s) => (s && s.pj > 0 ? Math.max(2.5, (s.gf + s.gc) / s.pj) : 5.6);
             const fullMatchExpected = (avgGoalsTeam(h) + avgGoalsTeam(a)) / 2;
 
-            // Goles esperados en el tiempo que queda de partido
             const remainingExpected = fullMatchExpected * remFrac;
             const totalExpected = liveGoalsNow + remainingExpected;
 
-            // Distribución de Poisson exacta para probabilidad acumulada P(X <= k)
             const poissonCdf = (lambda, k) => {
                 if (k < 0) return 0;
                 let sum = 0, term = Math.exp(-lambda);
@@ -1482,7 +1479,6 @@
                 return Math.min(0.97, Math.max(0.03, sum));
             };
 
-            // Líneas de goles del partido adaptadas a partidos de muchos goles (3.5, 4.5, 5.5, 6.5)
             const lines = [3.5, 4.5, 5.5, 6.5].map(line => {
                 if (liveGoalsNow > line) {
                     return { line, overOdd: 1.03, underOdd: 15.00, probOver: 97, alreadyHit: true };
@@ -1511,21 +1507,16 @@
                 const livePlayerGoals = (match.goals && match.goals[p.id]) || 0;
                 const pjCount = st ? st.pj : 0;
 
-                // Cuotas iniciales con decimales variados:
-                // +0.5 goles: 1.40 - 1.70 | +1.5 goles: 1.90 - 2.10 | +2.5 goles: 2.50 - 3.00 | +3.5 goles: ~4.00
-                const j1 = seededJitter(p.id + '_g1', 0.14); // 1.40 .. 1.68 (centro 1.54)
-                const j2 = seededJitter(p.id + '_g2', 0.10); // 1.90 .. 2.10 (centro 2.00)
-                const j3 = seededJitter(p.id + '_g3', 0.25); // 2.50 .. 3.00 (centro 2.75)
-                const j4 = seededJitter(p.id + '_g4', 0.18); // ~3.82 .. 4.18 (centro 4.00)
+                const j1 = seededJitter(p.id + '_g1', 0.14);
+                const j2 = seededJitter(p.id + '_g2', 0.10);
+                const j3 = seededJitter(p.id + '_g3', 0.25);
+                const j4 = seededJitter(p.id + '_g4', 0.18);
 
                 const baseOdd1 = 1.54 + j1;
                 const baseOdd2 = 2.00 + j2;
                 const baseOdd3 = 2.75 + j3;
                 const baseOdd4 = 4.00 + j4;
 
-                // Factor de forma partido a partido:
-                // - Apenas sube si lleva partidos sin mojar (máx +8% sobre la base, tope 1.70 para +0.5)
-                // - Baja con claridad cuando mete goles (ej. con 2 goles/partido baja hacia ~1.20)
                 const gpg = pjCount > 0 ? st.goals / pjCount : 0.95;
                 let formRatio = 1.0;
                 if (pjCount > 0) {
@@ -1536,13 +1527,11 @@
                     }
                 }
 
-                // Ajuste por tiempo restante en vivo (más contenido) y goles ya convertidos en el partido actual
                 const timePressure = 1 + (1 - remFrac) * 0.55;
 
                 const adjustPlayerLine = (baseOdd, lineTarget) => {
                     const needed = lineTarget - livePlayerGoals;
                     if (needed <= 0) return 1.04;
-                    // Si ya metió goles en este partido, las líneas siguientes bajan de cuota
                     const progressDiscount = livePlayerGoals > 0 ? Math.pow(0.74, livePlayerGoals) : 1;
                     const raw = baseOdd * formRatio * progressDiscount * (livePlayerGoals >= lineTarget - 1 ? 1 : timePressure);
                     return Number(raw.toFixed(2));
@@ -1576,7 +1565,7 @@
                 };
             });
 
-            // Doble Oportunidad (solo fase regular donde existe empate)
+            // Doble Oportunidad (fase regular)
             const base = computeMatchOdds(match, false);
             const p1X = Math.min(0.95, Math.max(0.10, (base.probHome + base.probDraw) / 100));
             const pX2 = Math.min(0.95, Math.max(0.10, (base.probDraw + base.probAway) / 100));
@@ -1593,14 +1582,13 @@
             return { isDynamic: hasHistory || isLive, expectedGoals: totalExpected.toFixed(1), lines, playersOdds, doubleChance };
         }
 
-        // Cuotas para Apuestas Especiales del Torneo (incluye TODOS los jugadores y cuotas iniciales con decimales variados)
+        // Cuotas para Apuestas Especiales del Torneo
         function computeTournamentSpecials() {
             const statsMap = getAllTeamsStatsMap();
             const pMap = getPlayerStatsMap();
             const teams = tournamentState.teams || [];
             const anyPlayed = tournamentState.matches.some(m => m.played);
 
-            // 1. Campeón del Torneo (cuotas iniciales ~8.50 - 10.60 con decimales por azar y actualización por resultados)
             const teamScores = teams.map((t) => {
                 const s = statsMap[t.id];
                 if (!s || s.pj === 0) {
@@ -1628,7 +1616,6 @@
                 };
             }).sort((a, b) => a.odd - b.odd);
 
-            // 2. Máximo Goleador (Bota de Oro - TODOS los jugadores del torneo, iniciales ~9.40 - 10.65 con decimales)
             const allPlayers = Object.values(pMap);
             const scorerWeights = allPlayers.map((st) => {
                 const gpg = st.pj > 0 ? st.goals / st.pj : 0;
@@ -1654,7 +1641,6 @@
                 };
             }).sort((a, b) => a.odd - b.odd);
 
-            // 3. Mejor Jugador del Torneo (Más MVPs - TODOS los jugadores del torneo, iniciales ~9.40 - 10.65 con decimales)
             const mvpWeights = allPlayers.map((st) => {
                 const weight = st.pj === 0 && st.mvps === 0 && st.goals === 0
                     ? Math.max(2.0, 3.2 + seededJitter('mvp_w_' + st.player.id, 0.45))
@@ -1678,7 +1664,6 @@
                 };
             }).sort((a, b) => a.odd - b.odd);
 
-            // 4. Ganador de cada Grupo (1° puesto, decimales variados al inicio y ajuste por tabla)
             const groupWinners = (tournamentState.groups || []).map(g => {
                 const rows = calculateGroupStandings(g);
                 const weights = rows.map((r) => {
@@ -1728,11 +1713,11 @@
             if (existingIdx !== -1) {
                 activeSlipLegs.splice(existingIdx, 1);
             } else {
-                // Reglas de coherencia dentro del mismo partido:
-                // 1) No permitir dos resultados distintos del mercado 1X2 o Doble Oportunidad en el mismo partido
-                if (leg.marketType === '1X2' || leg.marketType === 'DOUBLE_CHANCE') {
+                // 1) No permitir dos selecciones excluyentes de resultado/clasificación en el mismo partido
+                const resultTypes = ['1X2', 'DOUBLE_CHANCE', 'QUALIFY'];
+                if (resultTypes.includes(leg.marketType)) {
                     activeSlipLegs = activeSlipLegs.filter(l =>
-                        !(l.matchId === leg.matchId && (l.marketType === '1X2' || l.marketType === 'DOUBLE_CHANCE'))
+                        !(l.matchId === leg.matchId && resultTypes.includes(l.marketType))
                     );
                 }
                 // 2) No permitir Over y Under de la misma línea de goles en el mismo partido
@@ -1777,6 +1762,7 @@
             if (activeBuilderMatchId) renderBetBuilderModal();
         }
 
+        // Selección rápida 1X2 (en fase regular y en eliminatorias como tiempo reglamentario)
         function selectBetOutcome(matchId, isKnockout, pick) {
             const list = isKnockout ? tournamentState.knockoutMatches : tournamentState.matches;
             const match = list.find(m => m.id === matchId);
@@ -1786,16 +1772,17 @@
             const away = getTeam(match.awayId);
             if (!home || !away) return;
 
-            const odds = computeMatchOdds(match, isKnockout);
+            // 1X2 siempre es a 3 opciones (Gana Local, Empate, Gana Visitante)
+            const odds = computeMatchOdds(match, false);
             let odd = odds.home;
-            let pickLabel = `Gana ${home.name}`;
+            let pickLabel = isKnockout ? `Gana ${home.name} (90')` : `Gana ${home.name}`;
 
             if (pick === 'DRAW') {
                 odd = odds.draw;
-                pickLabel = 'Empate';
+                pickLabel = isKnockout ? 'Empate (90\')' : 'Empate';
             } else if (pick === 'AWAY') {
                 odd = odds.away;
-                pickLabel = `Gana ${away.name}`;
+                pickLabel = isKnockout ? `Gana ${away.name} (90')` : `Gana ${away.name}`;
             }
 
             toggleSlipLeg({
@@ -1809,7 +1796,37 @@
                 pickLabel,
                 odd,
                 matchTitle: `${home.name} vs ${away.name}`,
-                meta: isKnockout ? match.stageName : `${match.groupName} • Fecha ${match.round || 1}`
+                meta: isKnockout ? (match.stageName || 'Eliminatoria') : `${match.groupName} • Fecha ${match.round || 1}`
+            });
+        }
+
+        // Selección de "Clasifica / Avanza de ronda" (solo en partidos de eliminación)
+        function selectQualifyOutcome(matchId, pick) {
+            const match = tournamentState.knockoutMatches.find(m => m.id === matchId);
+            if (!match || match.played) return;
+
+            const home = getTeam(match.homeId);
+            const away = getTeam(match.awayId);
+            if (!home || !away) return;
+
+            const odds = computeMatchOdds(match, true);
+            const isFinal = match.stage === 'F';
+            const odd = pick === 'HOME' ? odds.home : odds.away;
+            const teamName = pick === 'HOME' ? home.name : away.name;
+            const pickLabel = isFinal ? `${teamName} Campeón (incl. penales)` : `Clasifica ${teamName}`;
+
+            toggleSlipLeg({
+                category: 'MATCH',
+                matchId,
+                isKnockout: true,
+                marketType: 'QUALIFY',
+                pick,
+                targetId: null,
+                line: null,
+                pickLabel,
+                odd,
+                matchTitle: `${home.name} vs ${away.name}`,
+                meta: match.stageName || 'Eliminatoria'
             });
         }
 
@@ -1832,7 +1849,7 @@
                 pickLabel,
                 odd,
                 matchTitle: `${home.name} vs ${away.name}`,
-                meta: isKnockout ? match.stageName : `${match.groupName} • Fecha ${match.round || 1}`
+                meta: isKnockout ? (match.stageName || 'Eliminatoria') : `${match.groupName} • Fecha ${match.round || 1}`
             });
         }
 
@@ -1855,7 +1872,7 @@
             showToast(`Agregado al boleto: "${pickLabel}".`);
         }
 
-        // Calcula la cuota combinada multiplicando las patas (con ligero ajuste si son del mismo partido)
+        // Calcula la cuota combinada multiplicando las patas
         function computeCombinedOdd(legs) {
             if (!legs.length) return 1.00;
             if (legs.length === 1) return Number(legs[0].odd.toFixed(2));
@@ -1867,7 +1884,6 @@
                 matchCounts[l.matchId] = (matchCounts[l.matchId] || 0) + 1;
             });
 
-            // Si hay correlación dentro del mismo partido (ej: gana equipo + gol de su delantero), suavizamos un 8% por pata extra en ese partido
             let correlationFactor = 1;
             Object.values(matchCounts).forEach(cnt => {
                 if (cnt > 1) correlationFactor *= Math.pow(0.92, cnt - 1);
@@ -1924,44 +1940,66 @@
             if (!home || !away) return;
 
             document.getElementById('bb-match-meta').textContent = activeBuilderIsKo
-                ? match.stageName
+                ? (match.stageName || 'Eliminatoria')
                 : `${match.groupName} • Fecha ${match.round || 1}`;
             document.getElementById('bb-match-title').textContent = `${home.name} vs ${away.name}`;
 
-            const odds1x2 = computeMatchOdds(match, activeBuilderIsKo);
+            // Para 1X2 siempre usamos cuotas de 3 opciones; para Clasifica usamos cuotas de 2 opciones
+            const odds1x2 = computeMatchOdds(match, false);
+            const oddsQualify = activeBuilderIsKo ? computeMatchOdds(match, true) : null;
             const props = computeMatchPropOdds(match);
             const body = document.getElementById('bb-markets-body');
 
             const showSection = (sec) => activeBuilderTab === 'ALL' || activeBuilderTab === sec;
+            const isFinal = match.stage === 'F';
 
             let html = '';
 
-            // 1. Resultado Final (1X2) y Doble Oportunidad
+            // 1. Resultado del Partido (1X2) + Clasifica (en Eliminación) o Doble Oportunidad (en Fase Regular)
             if (showSection('RESULT')) {
                 html += `
                     <div class="bg-[#2c2c2c] border border-[#3d3d3d] rounded-lg p-3.5 space-y-3">
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Resultado del Partido</span>
+                            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                                ${activeBuilderIsKo ? 'Resultado del Partido (Tiempo Reglamentario)' : 'Resultado del Partido (1X2)'}
+                            </span>
                             <span class="text-[10px] text-neutral-400">${odds1x2.isLive ? 'Cuotas en vivo según tiempo restante' : odds1x2.isDynamic ? 'Cuotas por rendimiento' : 'Cuota inicial'}</span>
                         </div>
-                        <div class="grid ${activeBuilderIsKo ? 'grid-cols-2' : 'grid-cols-3'} gap-2">
+                        <div class="grid grid-cols-3 gap-2">
                             <button onclick="selectBetOutcome('${match.id}', ${activeBuilderIsKo}, 'HOME')" class="odd-btn ${isLegInSlip(match.id, '1X2', 'HOME') ? 'is-active' : ''} rounded py-2 px-2 text-center">
                                 <div class="text-[11px] font-semibold truncate">Gana ${escHtml(home.name)}</div>
                                 <div class="odd-val text-sm">${odds1x2.home.toFixed(2)}</div>
                             </button>
-                            ${!activeBuilderIsKo ? `
-                                <button onclick="selectBetOutcome('${match.id}', false, 'DRAW')" class="odd-btn ${isLegInSlip(match.id, '1X2', 'DRAW') ? 'is-active' : ''} rounded py-2 px-2 text-center">
-                                    <div class="text-[11px] font-semibold">Empate</div>
-                                    <div class="odd-val text-sm">${odds1x2.draw.toFixed(2)}</div>
-                                </button>
-                            ` : ''}
+                            <button onclick="selectBetOutcome('${match.id}', ${activeBuilderIsKo}, 'DRAW')" class="odd-btn ${isLegInSlip(match.id, '1X2', 'DRAW') ? 'is-active' : ''} rounded py-2 px-2 text-center">
+                                <div class="text-[11px] font-semibold">Empate</div>
+                                <div class="odd-val text-sm">${odds1x2.draw.toFixed(2)}</div>
+                            </button>
                             <button onclick="selectBetOutcome('${match.id}', ${activeBuilderIsKo}, 'AWAY')" class="odd-btn ${isLegInSlip(match.id, '1X2', 'AWAY') ? 'is-active' : ''} rounded py-2 px-2 text-center">
                                 <div class="text-[11px] font-semibold truncate">Gana ${escHtml(away.name)}</div>
                                 <div class="odd-val text-sm">${odds1x2.away.toFixed(2)}</div>
                             </button>
                         </div>
 
-                        ${!activeBuilderIsKo ? `
+                        ${activeBuilderIsKo ? `
+                            <div class="pt-2 border-t border-[#3b3b3b] space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-bold uppercase tracking-wider text-[#ffdf1b]">
+                                        ${isFinal ? 'Se Consagra Campeón (Incluye Penales)' : 'Clasifica / Avanza de Ronda (Incluye Penales)'}
+                                    </span>
+                                    <span class="text-[10px] text-neutral-400">Sin empate</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button onclick="selectQualifyOutcome('${match.id}', 'HOME')" class="odd-btn ${isLegInSlip(match.id, 'QUALIFY', 'HOME') ? 'is-active' : ''} rounded py-2.5 px-3 text-center">
+                                        <div class="text-xs font-bold truncate">${isFinal ? `Campeón ${escHtml(home.name)}` : `Clasifica ${escHtml(home.name)}`}</div>
+                                        <div class="odd-val text-sm">${oddsQualify.home.toFixed(2)}</div>
+                                    </button>
+                                    <button onclick="selectQualifyOutcome('${match.id}', 'AWAY')" class="odd-btn ${isLegInSlip(match.id, 'QUALIFY', 'AWAY') ? 'is-active' : ''} rounded py-2.5 px-3 text-center">
+                                        <div class="text-xs font-bold truncate">${isFinal ? `Campeón ${escHtml(away.name)}` : `Clasifica ${escHtml(away.name)}`}</div>
+                                        <div class="odd-val text-sm">${oddsQualify.away.toFixed(2)}</div>
+                                    </button>
+                                </div>
+                            </div>
+                        ` : `
                             <div class="pt-2 border-t border-[#3b3b3b] space-y-2">
                                 <div class="text-xs font-bold uppercase tracking-wider text-emerald-400">Doble Oportunidad</div>
                                 <div class="grid grid-cols-3 gap-2">
@@ -1979,7 +2017,7 @@
                                     </button>
                                 </div>
                             </div>
-                        ` : ''}
+                        `}
                     </div>
                 `;
             }
@@ -2470,9 +2508,16 @@
             return Boolean(finalMatch && finalMatch.played && finalMatch.winnerId);
         }
 
-        // Evalúa si el creador ganó una apuesta de partido (1X2, Doble Oportunidad, Total Goles, Goles de Jugador o MVP)
+        // Evalúa si el creador ganó una apuesta de partido (1X2, Clasifica, Doble Oportunidad, Total Goles, Goles de Jugador o MVP)
         function evaluateMatchBetOutcome(bet, match) {
             const mType = bet.marketType || '1X2';
+
+            if (mType === 'QUALIFY') {
+                const winId = match.winnerId || (match.homeScore > match.awayScore ? match.homeId : (match.awayScore > match.homeScore ? match.awayId : null));
+                if (!winId) return false;
+                const outcome = winId === match.homeId ? 'HOME' : 'AWAY';
+                return bet.pick === outcome;
+            }
 
             if (mType === 'DOUBLE_CHANCE') {
                 if (match._ko) return false;
@@ -2496,15 +2541,11 @@
                 return Boolean(match.mvpId && match.mvpId === bet.targetId);
             }
 
-            // Por defecto: 1X2
+            // 1X2: evalúa el resultado del partido (si empatan en eliminatoria antes de penales, el resultado 1X2 es DRAW)
             let outcome = 'DRAW';
-            if (match._ko) {
-                outcome = match.winnerId === match.homeId ? 'HOME' : 'AWAY';
-            } else {
-                if (match.homeScore > match.awayScore) outcome = 'HOME';
-                else if (match.awayScore > match.homeScore) outcome = 'AWAY';
-                else outcome = 'DRAW';
-            }
+            if (match.homeScore > match.awayScore) outcome = 'HOME';
+            else if (match.awayScore > match.homeScore) outcome = 'AWAY';
+            else outcome = 'DRAW';
             return bet.pick === outcome;
         }
 
@@ -2559,7 +2600,6 @@
             const tourneyDone = isTournamentFinished();
             const regularDone = tournamentState.matches.length > 0 && tournamentState.matches.every(m => m.played);
 
-            // Evalúa el estado de una sola pata: 'PENDING' | 'WON' | 'LOST'
             const evaluateSingleLeg = (leg) => {
                 if (leg.category === 'SPECIAL') {
                     const ready = leg.marketType === 'GROUP_WINNER' ? regularDone : tourneyDone;
@@ -2577,7 +2617,6 @@
                 const legs = Array.isArray(bet.legs) && bet.legs.length > 0 ? bet.legs : [bet];
                 const results = legs.map(evaluateSingleLeg);
 
-                // Si quedó OPEN y al menos un evento involucrado ya cerró -> devolver saldo al creador
                 if (bet.status === 'OPEN') {
                     if (results.some(r => r !== 'PENDING')) {
                         settleRefund(bet);
@@ -2585,14 +2624,11 @@
                     return;
                 }
 
-                // En apuestas MATCHED (1v1 activo):
-                // Si alguna pata ya perdió -> gana automáticamente el rival sin esperar al resto
                 if (results.includes('LOST')) {
                     settleMatchedBet(bet, bet.taker, bet.creator, bet.creatorStake + bet.takerStake);
                     return;
                 }
 
-                // Si todas las patas ganaron -> gana el creador
                 if (results.every(r => r === 'WON')) {
                     settleMatchedBet(bet, bet.creator, bet.taker, bet.creatorStake + bet.takerStake);
                 }
@@ -2713,7 +2749,7 @@
             renderMyBets();
         }
 
-        // Calcula el estado detallado en vivo o finalizado de cada selección (pata) de una apuesta estilo bet365
+        // Calcula el estado detallado en vivo o finalizado de cada selección (pata) de una apuesta
         function getLegTrackingInfo(leg) {
             if (leg.category === 'SPECIAL') {
                 const regularDone = tournamentState.matches.length > 0 && tournamentState.matches.every(m => m.played);
@@ -2920,7 +2956,7 @@
                 };
             }
 
-            // 1X2 o Doble Oportunidad: nunca se da por ganada hasta que termine el partido
+            // 1X2, Doble Oportunidad o Clasifica
             const matchWithKo = { ...match, _ko: Boolean(leg.isKnockout) };
             const currentlyWinning = evaluateMatchBetOutcome(leg, matchWithKo);
             if (isPlayed) {
@@ -2949,7 +2985,7 @@
             const played = [...tournamentState.matches, ...tournamentState.knockoutMatches].filter(m => m.played);
             const goals = played.reduce((s, m) => s + (m.homeScore || 0) + (m.awayScore || 0), 0);
             const avg = played.length ? (goals / played.length).toFixed(1) : '0.0';
-            const remaining = tournamentState.matches.filter(m => !m.played).length;
+            const remaining = tournamentState.matches.filter(m => !m.played).length + tournamentState.knockoutMatches.filter(m => !m.played && m.homeId && m.awayId).length;
 
             const goalsMap = {};
             played.forEach(m => {
@@ -2974,11 +3010,11 @@
             el.innerHTML =
                 chip('Goles Totales', goals, `${played.length} partidos jugados`) +
                 chip('Promedio', avg, 'goles por partido') +
-                chip('Por Jugar', remaining, 'en fase regular') +
+                chip('Por Jugar', remaining, 'partidos activos') +
                 chip('Goleador', topPlayer ? escHtml(topPlayer.name) : '—', topPlayer ? `${top.qty} goles • ${topPlayer.team.code}` : 'sin goles');
         }
 
-        /* --- Partidos y Cuotas --- */
+        /* --- Partidos y Cuotas (Fechas + Fases de Eliminación) --- */
         function renderLiveNowSection(statsMap, openBets) {
             const section = document.getElementById('live-now-section');
             const listEl = document.getElementById('live-now-list');
@@ -3004,14 +3040,51 @@
             listEl.innerHTML = allLive.map(x => renderBet365MatchRow(x.m, x.ko, statsMap, openBets)).join('');
         }
 
+        // Devuelve las fases eliminatorias aplicables según formato del torneo
+        function getKnockoutStagesMeta() {
+            const hasElimination = !(tournamentState.format === 'LEAGUE' && tournamentState.leagueQualifiers === 0);
+            if (!hasElimination) return [];
+
+            const totalQualifiers = tournamentState.format === 'LEAGUE'
+                ? Number(tournamentState.leagueQualifiers || 4)
+                : Number(tournamentState.cupGroupsCount || 2) * Number(tournamentState.cupQualifiersPerGroup || 2);
+
+            const stages = [];
+            if (totalQualifiers > 4 || tournamentState.knockoutMatches.some(m => m.stage === 'QF')) {
+                stages.push({ key: 'KO_QF', stage: 'QF', label: 'Cuartos' });
+            }
+            if (totalQualifiers > 2 || tournamentState.knockoutMatches.some(m => m.stage === 'SF')) {
+                stages.push({ key: 'KO_SF', stage: 'SF', label: 'Semifinales' });
+            }
+            stages.push({ key: 'KO_F', stage: 'F', label: 'Final' });
+            return stages;
+        }
+
+        function renderKnockoutNotDrawnCard(stageLabel) {
+            return `
+                <div class="bg-[#282828] border border-dashed border-[#4a4a4a] rounded-lg p-8 text-center space-y-2">
+                    <div class="inline-block bg-amber-500/15 border border-amber-500/40 text-amber-300 text-[11px] font-bold uppercase px-2.5 py-0.5 rounded">
+                        ${escHtml(stageLabel)} • Pendiente
+                    </div>
+                    <div class="text-sm sm:text-base font-bold text-white">Los cruces de ${escHtml(stageLabel)} todavía no se sortearon</div>
+                    <p class="text-xs text-neutral-400 max-w-md mx-auto">
+                        Esta fase aún no está definida. Apenas finalice la instancia anterior y se definan los cruces en el torneo, aparecerán acá automáticamente con sus cuotas de <strong>1X2</strong> y <strong>Clasifica</strong>.
+                    </p>
+                </div>
+            `;
+        }
+
         function renderMatches() {
             const listEl = document.getElementById('matches-list');
             const barEl = document.getElementById('rounds-filter-bar');
             const badge = document.getElementById('matches-progress-badge');
             const badgeDesktop = document.getElementById('matches-progress-badge-desktop');
 
-            const playedCount = tournamentState.matches.filter(m => m.played).length;
-            const progText = `${playedCount} / ${tournamentState.matches.length} Jugados`;
+            const validKoMatches = tournamentState.knockoutMatches.filter(m => m.homeId && m.awayId);
+            const totalAll = tournamentState.matches.length + validKoMatches.length;
+            const playedAll = tournamentState.matches.filter(m => m.played).length + validKoMatches.filter(m => m.played).length;
+
+            const progText = `${playedAll} / ${totalAll} Jugados`;
             if (badge) badge.textContent = progText;
             if (badgeDesktop) badgeDesktop.textContent = progText;
 
@@ -3019,7 +3092,7 @@
             const openBets = Object.values(betsMap).filter(b => b.status === 'OPEN');
             renderLiveNowSection(statsMap, openBets);
 
-            if (tournamentState.matches.length === 0) {
+            if (tournamentState.matches.length === 0 && tournamentState.knockoutMatches.length === 0) {
                 if (barEl) barEl.innerHTML = '';
                 listEl.innerHTML = `
                     <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-8 text-center text-neutral-400 text-sm">
@@ -3029,9 +3102,11 @@
                 return;
             }
 
-            // Filtro de fechas
+            // Construir barra de filtros: Todas + Fechas 1, 2, 3... + Fases de Eliminación (Cuartos, Semifinales, Final)
             const rounds = Array.from(new Set(tournamentState.matches.map(m => m.round || 1))).sort((a, b) => a - b);
-            if (selectedRoundFilter !== 'ALL' && !rounds.includes(selectedRoundFilter)) selectedRoundFilter = 'ALL';
+            const koStages = getKnockoutStagesMeta();
+            const validFilterKeys = ['ALL', ...rounds, ...koStages.map(s => s.key)];
+            if (!validFilterKeys.includes(selectedRoundFilter)) selectedRoundFilter = 'ALL';
 
             barEl.innerHTML = `
                 <button onclick="setRoundFilter('ALL')" class="shrink-0 text-xs px-3 py-1.5 rounded font-bold transition ${selectedRoundFilter === 'ALL' ? 'bg-[#027b5b] text-white' : 'bg-[#383838] text-neutral-300 hover:bg-[#444]'}">
@@ -3041,16 +3116,52 @@
                 <button onclick="setRoundFilter(${r})" class="shrink-0 text-xs px-3 py-1.5 rounded font-bold transition ${selectedRoundFilter === r ? 'bg-[#ffdf1b] text-[#111]' : 'bg-[#383838] text-neutral-300 hover:bg-[#444]'}">
                     Fecha ${r}
                 </button>
-            `).join('');
+            `).join('') + (koStages.length ? `<span class="text-neutral-600 px-0.5 select-none">|</span>` : '') + koStages.map(st => {
+                const stMatches = tournamentState.knockoutMatches.filter(m => m.stage === st.stage && m.homeId && m.awayId);
+                const isDrawn = stMatches.length > 0;
+                const active = selectedRoundFilter === st.key;
+                return `
+                    <button onclick="setRoundFilter('${st.key}')" class="shrink-0 text-xs px-3 py-1.5 rounded font-bold transition flex items-center space-x-1 ${active ? 'bg-[#ffdf1b] text-[#111]' : isDrawn ? 'bg-[#027b5b]/30 border border-[#027b5b] text-emerald-300 hover:bg-[#027b5b]/50' : 'bg-[#303030] text-neutral-400 hover:bg-[#3d3d3d]'}">
+                        <span>${escHtml(st.label)}</span>
+                        ${!isDrawn ? `<span class="w-1.5 h-1.5 rounded-full bg-amber-400" title="Aún no sorteada"></span>` : ''}
+                    </button>
+                `;
+            }).join('');
 
+            // Caso 1: El usuario seleccionó una fase de eliminación específica (ej. Cuartos, Semifinales o Final)
+            if (typeof selectedRoundFilter === 'string' && selectedRoundFilter.startsWith('KO_')) {
+                const stageMeta = koStages.find(s => s.key === selectedRoundFilter);
+                const stageCode = stageMeta ? stageMeta.stage : selectedRoundFilter.replace('KO_', '');
+                const stageLabel = stageMeta ? stageMeta.label : 'Fase Eliminatoria';
+                const stageMatches = tournamentState.knockoutMatches.filter(m => m.stage === stageCode && m.homeId && m.awayId);
+
+                if (stageMatches.length === 0) {
+                    listEl.innerHTML = renderKnockoutNotDrawnCard(stageLabel);
+                    return;
+                }
+
+                listEl.innerHTML = `
+                    <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg overflow-hidden">
+                        <div class="bg-[#027b5b] px-4 py-2 border-b border-[#02382c] flex items-center justify-between">
+                            <span class="text-xs font-bold uppercase tracking-wider text-white">${escHtml(stageLabel)} • Eliminación Directa</span>
+                            <span class="text-[10px] font-bold uppercase text-[#ffdf1b]">1X2 (90') y Clasifica</span>
+                        </div>
+                        <div class="divide-y divide-[#383838]">
+                            ${stageMatches.map(m => renderBet365MatchRow(m, true, statsMap, openBets)).join('')}
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            // Caso 2: "Todas" o una Fecha regular (1, 2, 3...)
             const filtered = selectedRoundFilter === 'ALL'
                 ? tournamentState.matches
                 : tournamentState.matches.filter(m => (m.round || 1) === selectedRoundFilter);
 
-            // Agrupar por fecha
             const shownRounds = Array.from(new Set(filtered.map(m => m.round || 1))).sort((a, b) => a - b);
 
-            listEl.innerHTML = shownRounds.map(r => {
+            let html = shownRounds.map(r => {
                 const rMatches = filtered.filter(m => (m.round || 1) === r);
                 return `
                     <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg overflow-hidden">
@@ -3068,6 +3179,40 @@
                     </div>
                 `;
             }).join('');
+
+            // Si está en "Todas", mostrar también las fases eliminatorias debajo (o avisar que aún no se sortearon)
+            if (selectedRoundFilter === 'ALL' && koStages.length > 0) {
+                const drawnKo = tournamentState.knockoutMatches.filter(m => m.homeId && m.awayId);
+                if (drawnKo.length > 0) {
+                    html += koStages.map(st => {
+                        const stMatches = drawnKo.filter(m => m.stage === st.stage);
+                        if (!stMatches.length) return '';
+                        return `
+                            <div class="bg-[#282828] border border-[#027b5b]/60 rounded-lg overflow-hidden">
+                                <div class="bg-[#027b5b] px-4 py-2 border-b border-[#02382c] flex items-center justify-between">
+                                    <span class="text-xs font-bold uppercase tracking-wider text-white">${escHtml(st.label)} • Eliminación Directa</span>
+                                    <span class="text-[10px] font-bold uppercase text-[#ffdf1b]">1X2 y Clasifica</span>
+                                </div>
+                                <div class="divide-y divide-[#383838]">
+                                    ${stMatches.map(m => renderBet365MatchRow(m, true, statsMap, openBets)).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    html += `
+                        <div class="bg-[#282828] border border-dashed border-[#444] rounded-lg px-4 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                            <div class="flex items-center space-x-2">
+                                <span class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
+                                <span class="text-neutral-300"><strong class="text-white">Fase de Eliminación (${koStages.map(s => s.label).join(' → ')}):</strong> Todavía no se sortearon los cruces.</span>
+                            </div>
+                            <span class="text-[11px] text-amber-300 font-semibold shrink-0">Aún no definidas</span>
+                        </div>
+                    `;
+                }
+            }
+
+            listEl.innerHTML = html;
         }
 
         function formatLiveGoalScorers(m, team) {
@@ -3085,30 +3230,35 @@
             const away = getTeam(m.awayId);
             if (!home || !away) return '';
 
-            const odds = computeMatchOdds(m, isKnockout);
+            // 1X2 siempre tiene 3 botones (Gana Local, Empate, Gana Visitante).
+            // En partidos de eliminación, además mostramos debajo los botones de "Clasifica / Avanza".
+            const odds1x2 = computeMatchOdds(m, false);
+            const oddsQualify = isKnockout ? computeMatchOdds(m, true) : null;
             const hPos = statsMap[home.id]?.pos;
             const aPos = statsMap[away.id]?.pos;
             const matchOpenBets = openBets.filter(b => b.matchId === m.id);
             const mvp = m.mvpId ? getPlayer(m.mvpId) : null;
             const matchLegsCount = activeSlipLegs.filter(l => l.matchId === m.id).length;
+            const isFinal = m.stage === 'F';
 
-            const isSel = (pick) => isLegInSlip(m.id, '1X2', pick) ? 'is-active' : '';
+            const isSel1x2 = (pick) => isLegInSlip(m.id, '1X2', pick) ? 'is-active' : '';
+            const isSelQual = (pick) => isLegInSlip(m.id, 'QUALIFY', pick) ? 'is-active' : '';
             const liveBadgeText = m.liveMinuteLabel && m.liveMinuteLabel !== 'EN VIVO'
                 ? `● EN VIVO ${escHtml(m.liveMinuteLabel)}`
                 : '● EN VIVO';
 
             return `
-                <div class="p-3.5 hover:bg-[#2e2e2e] transition space-y-2 ${odds.isLive ? 'live-match-card bg-[#292224]' : ''}">
+                <div class="p-3.5 hover:bg-[#2e2e2e] transition space-y-2.5 ${odds1x2.isLive ? 'live-match-card bg-[#292224]' : ''}">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <!-- Equipos (Clic abre el Bet Builder estilo bet365) -->
                         <div onclick="${!m.played ? `openBetBuilderModal('${m.id}', ${isKnockout})` : ''}" class="flex-1 min-w-0 space-y-1.5 ${!m.played ? 'cursor-pointer group' : ''}">
                             <div class="flex flex-wrap items-center gap-1.5 text-[10px] text-neutral-400">
-                                <span class="uppercase font-semibold">${escHtml(isKnockout ? m.stageName : m.groupName)}</span>
+                                <span class="uppercase font-semibold">${escHtml(isKnockout ? (m.stageName || 'Eliminatoria') : m.groupName)}</span>
                                 ${m.played
                                     ? `<span class="bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.2 rounded">FINALIZADO</span>`
-                                    : odds.isLive
+                                    : odds1x2.isLive
                                         ? `<span class="bg-rose-600 text-white font-extrabold px-2 py-0.5 rounded animate-pulse">${liveBadgeText}</span>`
-                                        : `<span class="bg-amber-500/15 text-[#ffdf1b] font-bold px-1.5 py-0.2 rounded">${odds.isDynamic ? 'CUOTA DINÁMICA' : 'CUOTA INICIAL'}</span>`
+                                        : `<span class="bg-amber-500/15 text-[#ffdf1b] font-bold px-1.5 py-0.2 rounded">${odds1x2.isDynamic ? 'CUOTA DINÁMICA' : 'CUOTA INICIAL'}</span>`
                                 }
                                 ${!m.played
                                     ? `<span class="bg-[#027b5b]/30 group-hover:bg-[#027b5b] text-emerald-300 group-hover:text-white border border-emerald-500/40 font-bold px-2 py-0.5 rounded transition">+ Bet Builder &rsaquo;</span>`
@@ -3132,9 +3282,9 @@
                                         <span class="text-sm sm:text-base font-bold text-white group-hover:text-[#ffdf1b] transition truncate">${escHtml(home.name)}</span>
                                         ${hPos ? `<span class="text-[10px] text-neutral-400 font-semibold">${hPos}°</span>` : ''}
                                     </div>
-                                    ${(m.played || odds.isLive) ? formatLiveGoalScorers(m, home) : ''}
+                                    ${(m.played || odds1x2.isLive) ? formatLiveGoalScorers(m, home) : ''}
                                 </div>
-                                ${(m.played || odds.isLive) ? `<span class="font-sport text-2xl font-bold ${m.homeScore > m.awayScore ? 'text-[#ffdf1b]' : 'text-white'}">${m.homeScore || 0}</span>` : ''}
+                                ${(m.played || odds1x2.isLive) ? `<span class="font-sport text-2xl font-bold ${m.homeScore > m.awayScore ? 'text-[#ffdf1b]' : 'text-white'}">${m.homeScore || 0}</span>` : ''}
                             </div>
 
                             <!-- Visitante -->
@@ -3145,32 +3295,48 @@
                                         <span class="text-sm sm:text-base font-bold text-white group-hover:text-[#ffdf1b] transition truncate">${escHtml(away.name)}</span>
                                         ${aPos ? `<span class="text-[10px] text-neutral-400 font-semibold">${aPos}°</span>` : ''}
                                     </div>
-                                    ${(m.played || odds.isLive) ? formatLiveGoalScorers(m, away) : ''}
+                                    ${(m.played || odds1x2.isLive) ? formatLiveGoalScorers(m, away) : ''}
                                 </div>
-                                ${(m.played || odds.isLive) ? `<span class="font-sport text-2xl font-bold ${m.awayScore > m.homeScore ? 'text-[#ffdf1b]' : 'text-white'}">${m.awayScore || 0}</span>` : ''}
+                                ${(m.played || odds1x2.isLive) ? `<span class="font-sport text-2xl font-bold ${m.awayScore > m.homeScore ? 'text-[#ffdf1b]' : 'text-white'}">${m.awayScore || 0}</span>` : ''}
                             </div>
                         </div>
 
-                        <!-- Botones rápidos de Cuotas (1 - X - 2) -->
+                        <!-- Botones rápidos de Cuotas -->
                         ${!m.played ? `
-                            <div class="grid ${isKnockout ? 'grid-cols-2' : 'grid-cols-3'} gap-2 w-full sm:w-60 shrink-0">
-                                <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'HOME')" class="odd-btn ${isSel('HOME')} rounded-lg py-2 px-2 flex flex-col items-center justify-center">
-                                    <span class="text-[10px] opacity-75 font-semibold">${escHtml(home.code)}</span>
-                                    <span class="odd-val text-sm sm:text-base">${odds.home.toFixed(2)}</span>
-                                </button>
-                                ${!isKnockout ? `
-                                    <button onclick="selectBetOutcome('${m.id}', false, 'DRAW')" class="odd-btn ${isSel('DRAW')} rounded-lg py-2 px-2 flex flex-col items-center justify-center">
-                                        <span class="text-[10px] opacity-75 font-semibold">EMP</span>
-                                        <span class="odd-val text-sm sm:text-base">${odds.draw.toFixed(2)}</span>
+                            <div class="w-full sm:w-60 shrink-0 space-y-1.5">
+                                <!-- 1X2 (Gana Local, Empate, Gana Visitante) -->
+                                <div class="grid grid-cols-3 gap-1.5">
+                                    <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'HOME')" class="odd-btn ${isSel1x2('HOME')} rounded-lg py-1.5 px-2 flex flex-col items-center justify-center">
+                                        <span class="text-[10px] opacity-75 font-semibold">${escHtml(home.code)}</span>
+                                        <span class="odd-val text-sm">${odds1x2.home.toFixed(2)}</span>
                                     </button>
+                                    <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'DRAW')" class="odd-btn ${isSel1x2('DRAW')} rounded-lg py-1.5 px-2 flex flex-col items-center justify-center">
+                                        <span class="text-[10px] opacity-75 font-semibold">EMP</span>
+                                        <span class="odd-val text-sm">${odds1x2.draw.toFixed(2)}</span>
+                                    </button>
+                                    <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'AWAY')" class="odd-btn ${isSel1x2('AWAY')} rounded-lg py-1.5 px-2 flex flex-col items-center justify-center">
+                                        <span class="text-[10px] opacity-75 font-semibold">${escHtml(away.code)}</span>
+                                        <span class="odd-val text-sm">${odds1x2.away.toFixed(2)}</span>
+                                    </button>
+                                </div>
+
+                                <!-- En eliminación: mercado Clasifica / Campeón (reemplaza Doble Oportunidad) -->
+                                ${isKnockout ? `
+                                    <div class="grid grid-cols-2 gap-1.5">
+                                        <button onclick="selectQualifyOutcome('${m.id}', 'HOME')" class="odd-btn ${isSelQual('HOME')} rounded-lg py-1.5 px-2 flex items-center justify-between">
+                                            <span class="text-[10px] font-bold truncate pr-1">${isFinal ? `Campeón ${escHtml(home.code)}` : `Clasifica ${escHtml(home.code)}`}</span>
+                                            <span class="odd-val text-xs shrink-0">${oddsQualify.home.toFixed(2)}</span>
+                                        </button>
+                                        <button onclick="selectQualifyOutcome('${m.id}', 'AWAY')" class="odd-btn ${isSelQual('AWAY')} rounded-lg py-1.5 px-2 flex items-center justify-between">
+                                            <span class="text-[10px] font-bold truncate pr-1">${isFinal ? `Campeón ${escHtml(away.code)}` : `Clasifica ${escHtml(away.code)}`}</span>
+                                            <span class="odd-val text-xs shrink-0">${oddsQualify.away.toFixed(2)}</span>
+                                        </button>
+                                    </div>
                                 ` : ''}
-                                <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'AWAY')" class="odd-btn ${isSel('AWAY')} rounded-lg py-2 px-2 flex flex-col items-center justify-center">
-                                    <span class="text-[10px] opacity-75 font-semibold">${escHtml(away.code)}</span>
-                                    <span class="odd-val text-sm sm:text-base">${odds.away.toFixed(2)}</span>
-                                </button>
                             </div>
                         ` : `
                             <div class="sm:w-60 shrink-0 text-right text-[11px] text-neutral-400 space-y-1">
+                                ${isKnockout && m.winnerId ? `<div class="inline-block bg-[#027b5b]/30 border border-emerald-500/40 text-emerald-300 px-2 py-0.5 rounded font-bold">${isFinal ? 'Campeón' : 'Clasificó'}: ${escHtml(getTeam(m.winnerId)?.name || '')}</div>` : ''}
                                 ${mvp ? `<div class="inline-block bg-[#1e1e1e] border border-[#444] text-[#ffdf1b] px-2 py-0.5 rounded font-semibold">MVP: ${escHtml(mvp.name)}</div>` : ''}
                                 <div>Apuestas liquidadas</div>
                             </div>
@@ -3253,7 +3419,6 @@
                 .filter(b => b.status === 'OPEN')
                 .sort((a, b) => b.createdAt - a.createdAt);
 
-            // Desafíos dirigidos al usuario logueado
             const incomingForMe = currentUser
                 ? openBets.filter(b => b.targetUser === currentUser)
                 : [];
@@ -3265,7 +3430,6 @@
                 mobileBadge.classList.toggle('hidden', incomingForMe.length === 0);
             }
 
-            // Mini lista lateral (muestra los desafíos 1v1 recibidos)
             const mini = document.getElementById('mini-open-bets');
             if (!currentUser) {
                 mini.innerHTML = `<div class="text-neutral-400 text-center py-3">Iniciá sesión para ver tus desafíos 1v1 recibidos.</div>`;
@@ -3290,7 +3454,6 @@
                 `).join('');
             }
 
-            // Vista completa de desafíos 1v1
             const container = document.getElementById('market-bets-list');
             if (!currentUser) {
                 container.innerHTML = `
@@ -3372,11 +3535,10 @@
                 return;
             }
 
-            const renderLegStepRow = (leg, idx, totalLegs, isCreator) => {
+            const renderLegStepRow = (leg, idx, totalLegs) => {
                 const tr = getLegTrackingInfo(leg);
                 const isLast = idx === totalLegs - 1;
 
-                // Icono circular estilo bet365
                 let dotHtml = `<span class="w-5 h-5 rounded-full bg-[#3d3d3d] border border-neutral-500 flex items-center justify-center text-[10px] text-neutral-300 shrink-0">•</span>`;
                 let lineClass = 'bg-[#454545]';
                 let titleColor = 'text-white';
@@ -3392,14 +3554,6 @@
                     lineClass = 'bg-rose-500/60';
                     titleColor = 'text-rose-300 line-through opacity-85';
                     statusPill = `<span class="text-[10px] font-extrabold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300">${escHtml(tr.statusText)}</span>`;
-                } else if (tr.state === 'LEADING') {
-                    dotHtml = `<span class="w-5 h-5 rounded-full bg-[#027b5b] border border-[#00e676] text-[#00e676] font-extrabold flex items-center justify-center text-[10px] shrink-0">▲</span>`;
-                    lineClass = 'bg-[#027b5b]';
-                    titleColor = 'text-emerald-200';
-                    statusPill = `<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-[#027b5b]/40 text-emerald-300 border border-emerald-500/40">${escHtml(tr.statusText)}</span>`;
-                } else if (tr.state === 'TRAILING') {
-                    dotHtml = `<span class="w-5 h-5 rounded-full bg-amber-500/25 border border-amber-400 text-amber-300 font-bold flex items-center justify-center text-[10px] shrink-0">!</span>`;
-                    statusPill = `<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">${escHtml(tr.statusText)}</span>`;
                 }
 
                 const barFillColor = tr.state === 'HIT'
@@ -3460,7 +3614,6 @@
                         : `<span class="bg-rose-500/25 text-rose-300 px-2 py-0.5 rounded font-bold">PERDIDA (-${formatMoney(myStake)})</span>`;
                 }
 
-                // Resumen de marcadores de los partidos involucrados en esta apuesta
                 const matchIds = Array.from(new Set(legs.filter(l => l.category !== 'SPECIAL').map(l => l.matchId)));
                 const matchScoreCards = matchIds.map(mid => {
                     const m = tournamentState.matches.find(x => x.id === mid) || tournamentState.knockoutMatches.find(x => x.id === mid);
@@ -3536,7 +3689,7 @@
                                 </div>
 
                                 <div class="pt-1">
-                                    ${legs.map((leg, idx) => renderLegStepRow(leg, idx, legs.length, isCreator)).join('')}
+                                    ${legs.map((leg, idx) => renderLegStepRow(leg, idx, legs.length)).join('')}
                                 </div>
 
                                 ${matchScoreCards ? `
@@ -3725,7 +3878,7 @@
             banner.classList.add('hidden');
 
             if (!tournamentState.knockoutMatches.length) {
-                container.innerHTML = `<div class="md:col-span-3 bg-[#282828] border border-[#3a3a3a] rounded-lg p-8 text-center text-neutral-400 text-sm">Las llaves de Fase Final todavía no fueron generadas en el torneo.</div>`;
+                container.innerHTML = `<div class="md:col-span-3 bg-[#282828] border border-[#3a3a3a] rounded-lg p-8 text-center text-neutral-400 text-sm">Las llaves de Fase Final todavía no se sortearon ni están definidas aún.</div>`;
                 return;
             }
 
@@ -3755,7 +3908,7 @@
                     ${st.matches.map(m => {
                         const home = getTeam(m.homeId), away = getTeam(m.awayId);
                         if (!home || !away) {
-                            return `<div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-4 text-center text-xs text-neutral-500">${escHtml(m.stageName)} — Esperando rivales...</div>`;
+                            return `<div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-4 text-center text-xs text-neutral-500">${escHtml(m.stageName)} — Cruce aún no definido / sin sortear</div>`;
                         }
                         return `<div class="bg-[#282828] border border-[#3a3a3a] rounded-lg overflow-hidden">${renderBet365MatchRow(m, true, statsMap, openBets)}</div>`;
                     }).join('')}
