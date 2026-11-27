@@ -281,8 +281,17 @@
                         <div id="live-now-list" class="divide-y divide-[#3d3135]"></div>
                     </div>
 
-                    <!-- Resumen rápido del torneo -->
-                    <div id="summary-strip" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
+                    <!-- Carrusel de Combinadas IA / Bet Boosts (reemplaza las 4 tarjetas de resumen) -->
+                    <div id="ai-boosts-section" class="space-y-2">
+                        <div class="flex items-center justify-between px-0.5">
+                            <div class="flex items-center space-x-2">
+                                <span class="bg-[#00e676]/15 border border-[#00e676]/40 text-[#00e676] text-[10px] font-extrabold uppercase px-2 py-0.5 rounded">IA • Bet Boost</span>
+                                <span id="ai-boosts-context" class="text-xs font-bold text-neutral-300">Combinadas recomendadas</span>
+                            </div>
+                            <span class="text-[11px] text-neutral-400">Tocá una cuota para cargar al boleto &rarr;</span>
+                        </div>
+                        <div id="summary-strip" class="flex gap-3 overflow-x-auto pb-1.5 snap-x snap-mandatory"></div>
+                    </div>
 
                     <!-- Barra de filtros de fechas y fases de eliminación -->
                     <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -3154,7 +3163,7 @@
                 return;
             }
 
-            // Caso 2: "Todas" o una Fecha regular (1, 2, 3...)
+            // Caso 2: Fechas de Fase Regular (Todas o Fecha 1, 2, 3...)
             const filtered = selectedRoundFilter === 'ALL'
                 ? tournamentState.matches
                 : tournamentState.matches.filter(m => (m.round || 1) === selectedRoundFilter);
@@ -3180,36 +3189,19 @@
                 `;
             }).join('');
 
-            // Si está en "Todas", mostrar también las fases eliminatorias debajo (o avisar que aún no se sortearon)
-            if (selectedRoundFilter === 'ALL' && koStages.length > 0) {
-                const drawnKo = tournamentState.knockoutMatches.filter(m => m.homeId && m.awayId);
-                if (drawnKo.length > 0) {
-                    html += koStages.map(st => {
-                        const stMatches = drawnKo.filter(m => m.stage === st.stage);
-                        if (!stMatches.length) return '';
-                        return `
-                            <div class="bg-[#282828] border border-[#027b5b]/60 rounded-lg overflow-hidden">
-                                <div class="bg-[#027b5b] px-4 py-2 border-b border-[#02382c] flex items-center justify-between">
-                                    <span class="text-xs font-bold uppercase tracking-wider text-white">${escHtml(st.label)} • Eliminación Directa</span>
-                                    <span class="text-[10px] font-bold uppercase text-[#ffdf1b]">1X2 y Clasifica</span>
-                                </div>
-                                <div class="divide-y divide-[#383838]">
-                                    ${stMatches.map(m => renderBet365MatchRow(m, true, statsMap, openBets)).join('')}
-                                </div>
-                            </div>
-                        `;
-                    }).join('');
-                } else {
-                    html += `
-                        <div class="bg-[#282828] border border-dashed border-[#444] rounded-lg px-4 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-                            <div class="flex items-center space-x-2">
-                                <span class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
-                                <span class="text-neutral-300"><strong class="text-white">Fase de Eliminación (${koStages.map(s => s.label).join(' → ')}):</strong> Todavía no se sortearon los cruces.</span>
-                            </div>
-                            <span class="text-[11px] text-amber-300 font-semibold shrink-0">Aún no definidas</span>
+            // Si está en "Todas" y ya hay partidos eliminatorios sorteados, mostrarlos al final
+            if (selectedRoundFilter === 'ALL' && validKoMatches.length > 0) {
+                html += `
+                    <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg overflow-hidden">
+                        <div class="bg-[#027b5b] px-4 py-2 border-b border-[#02382c] flex items-center justify-between">
+                            <span class="text-xs font-bold uppercase tracking-wider text-white">Fase de Eliminación</span>
+                            <span class="text-[10px] font-bold uppercase text-[#ffdf1b]">1X2 (90') y Clasifica</span>
                         </div>
-                    `;
-                }
+                        <div class="divide-y divide-[#383838]">
+                            ${validKoMatches.map(m => renderBet365MatchRow(m, true, statsMap, openBets)).join('')}
+                        </div>
+                    </div>
+                `;
             }
 
             listEl.innerHTML = html;
@@ -3230,10 +3222,9 @@
             const away = getTeam(m.awayId);
             if (!home || !away) return '';
 
-            // 1X2 siempre tiene 3 botones (Gana Local, Empate, Gana Visitante).
-            // En partidos de eliminación, además mostramos debajo los botones de "Clasifica / Avanza".
-            const odds1x2 = computeMatchOdds(m, false);
-            const oddsQualify = isKnockout ? computeMatchOdds(m, true) : null;
+            // 1X2 siempre usa 3 opciones; en eliminatorias además se muestra "Clasifica" (2 opciones)
+            const odds = computeMatchOdds(m, false);
+            const qualifyOdds = isKnockout ? computeMatchOdds(m, true) : null;
             const hPos = statsMap[home.id]?.pos;
             const aPos = statsMap[away.id]?.pos;
             const matchOpenBets = openBets.filter(b => b.matchId === m.id);
@@ -3241,14 +3232,14 @@
             const matchLegsCount = activeSlipLegs.filter(l => l.matchId === m.id).length;
             const isFinal = m.stage === 'F';
 
-            const isSel1x2 = (pick) => isLegInSlip(m.id, '1X2', pick) ? 'is-active' : '';
-            const isSelQual = (pick) => isLegInSlip(m.id, 'QUALIFY', pick) ? 'is-active' : '';
+            const isSel = (pick) => isLegInSlip(m.id, '1X2', pick) ? 'is-active' : '';
+            const isQualSel = (pick) => isLegInSlip(m.id, 'QUALIFY', pick) ? 'is-active' : '';
             const liveBadgeText = m.liveMinuteLabel && m.liveMinuteLabel !== 'EN VIVO'
                 ? `● EN VIVO ${escHtml(m.liveMinuteLabel)}`
                 : '● EN VIVO';
 
             return `
-                <div class="p-3.5 hover:bg-[#2e2e2e] transition space-y-2.5 ${odds1x2.isLive ? 'live-match-card bg-[#292224]' : ''}">
+                <div class="p-3.5 hover:bg-[#2e2e2e] transition space-y-2.5 ${odds.isLive ? 'live-match-card bg-[#292224]' : ''}">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <!-- Equipos (Clic abre el Bet Builder estilo bet365) -->
                         <div onclick="${!m.played ? `openBetBuilderModal('${m.id}', ${isKnockout})` : ''}" class="flex-1 min-w-0 space-y-1.5 ${!m.played ? 'cursor-pointer group' : ''}">
@@ -3256,9 +3247,9 @@
                                 <span class="uppercase font-semibold">${escHtml(isKnockout ? (m.stageName || 'Eliminatoria') : m.groupName)}</span>
                                 ${m.played
                                     ? `<span class="bg-emerald-500/20 text-emerald-300 font-bold px-1.5 py-0.2 rounded">FINALIZADO</span>`
-                                    : odds1x2.isLive
+                                    : odds.isLive
                                         ? `<span class="bg-rose-600 text-white font-extrabold px-2 py-0.5 rounded animate-pulse">${liveBadgeText}</span>`
-                                        : `<span class="bg-amber-500/15 text-[#ffdf1b] font-bold px-1.5 py-0.2 rounded">${odds1x2.isDynamic ? 'CUOTA DINÁMICA' : 'CUOTA INICIAL'}</span>`
+                                        : `<span class="bg-amber-500/15 text-[#ffdf1b] font-bold px-1.5 py-0.2 rounded">${odds.isDynamic ? 'CUOTA DINÁMICA' : 'CUOTA INICIAL'}</span>`
                                 }
                                 ${!m.played
                                     ? `<span class="bg-[#027b5b]/30 group-hover:bg-[#027b5b] text-emerald-300 group-hover:text-white border border-emerald-500/40 font-bold px-2 py-0.5 rounded transition">+ Bet Builder &rsaquo;</span>`
@@ -3282,9 +3273,9 @@
                                         <span class="text-sm sm:text-base font-bold text-white group-hover:text-[#ffdf1b] transition truncate">${escHtml(home.name)}</span>
                                         ${hPos ? `<span class="text-[10px] text-neutral-400 font-semibold">${hPos}°</span>` : ''}
                                     </div>
-                                    ${(m.played || odds1x2.isLive) ? formatLiveGoalScorers(m, home) : ''}
+                                    ${(m.played || odds.isLive) ? formatLiveGoalScorers(m, home) : ''}
                                 </div>
-                                ${(m.played || odds1x2.isLive) ? `<span class="font-sport text-2xl font-bold ${m.homeScore > m.awayScore ? 'text-[#ffdf1b]' : 'text-white'}">${m.homeScore || 0}</span>` : ''}
+                                ${(m.played || odds.isLive) ? `<span class="font-sport text-2xl font-bold ${m.homeScore > m.awayScore ? 'text-[#ffdf1b]' : 'text-white'}">${m.homeScore || 0}</span>` : ''}
                             </div>
 
                             <!-- Visitante -->
@@ -3295,48 +3286,45 @@
                                         <span class="text-sm sm:text-base font-bold text-white group-hover:text-[#ffdf1b] transition truncate">${escHtml(away.name)}</span>
                                         ${aPos ? `<span class="text-[10px] text-neutral-400 font-semibold">${aPos}°</span>` : ''}
                                     </div>
-                                    ${(m.played || odds1x2.isLive) ? formatLiveGoalScorers(m, away) : ''}
+                                    ${(m.played || odds.isLive) ? formatLiveGoalScorers(m, away) : ''}
                                 </div>
-                                ${(m.played || odds1x2.isLive) ? `<span class="font-sport text-2xl font-bold ${m.awayScore > m.homeScore ? 'text-[#ffdf1b]' : 'text-white'}">${m.awayScore || 0}</span>` : ''}
+                                ${(m.played || odds.isLive) ? `<span class="font-sport text-2xl font-bold ${m.awayScore > m.homeScore ? 'text-[#ffdf1b]' : 'text-white'}">${m.awayScore || 0}</span>` : ''}
                             </div>
                         </div>
 
-                        <!-- Botones rápidos de Cuotas -->
+                        <!-- Botones rápidos de Cuotas: 1X2 + (Clasifica en eliminatorias) -->
                         ${!m.played ? `
-                            <div class="w-full sm:w-60 shrink-0 space-y-1.5">
-                                <!-- 1X2 (Gana Local, Empate, Gana Visitante) -->
+                            <div class="w-full sm:w-64 shrink-0 space-y-1.5">
                                 <div class="grid grid-cols-3 gap-1.5">
-                                    <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'HOME')" class="odd-btn ${isSel1x2('HOME')} rounded-lg py-1.5 px-2 flex flex-col items-center justify-center">
+                                    <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'HOME')" class="odd-btn ${isSel('HOME')} rounded-lg py-1.5 px-1.5 flex flex-col items-center justify-center">
                                         <span class="text-[10px] opacity-75 font-semibold">${escHtml(home.code)}</span>
-                                        <span class="odd-val text-sm">${odds1x2.home.toFixed(2)}</span>
+                                        <span class="odd-val text-sm">${odds.home.toFixed(2)}</span>
                                     </button>
-                                    <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'DRAW')" class="odd-btn ${isSel1x2('DRAW')} rounded-lg py-1.5 px-2 flex flex-col items-center justify-center">
+                                    <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'DRAW')" class="odd-btn ${isSel('DRAW')} rounded-lg py-1.5 px-1.5 flex flex-col items-center justify-center">
                                         <span class="text-[10px] opacity-75 font-semibold">EMP</span>
-                                        <span class="odd-val text-sm">${odds1x2.draw.toFixed(2)}</span>
+                                        <span class="odd-val text-sm">${odds.draw.toFixed(2)}</span>
                                     </button>
-                                    <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'AWAY')" class="odd-btn ${isSel1x2('AWAY')} rounded-lg py-1.5 px-2 flex flex-col items-center justify-center">
+                                    <button onclick="selectBetOutcome('${m.id}', ${isKnockout}, 'AWAY')" class="odd-btn ${isSel('AWAY')} rounded-lg py-1.5 px-1.5 flex flex-col items-center justify-center">
                                         <span class="text-[10px] opacity-75 font-semibold">${escHtml(away.code)}</span>
-                                        <span class="odd-val text-sm">${odds1x2.away.toFixed(2)}</span>
+                                        <span class="odd-val text-sm">${odds.away.toFixed(2)}</span>
                                     </button>
                                 </div>
 
-                                <!-- En eliminación: mercado Clasifica / Campeón (reemplaza Doble Oportunidad) -->
-                                ${isKnockout ? `
+                                ${isKnockout && qualifyOdds ? `
                                     <div class="grid grid-cols-2 gap-1.5">
-                                        <button onclick="selectQualifyOutcome('${m.id}', 'HOME')" class="odd-btn ${isSelQual('HOME')} rounded-lg py-1.5 px-2 flex items-center justify-between">
-                                            <span class="text-[10px] font-bold truncate pr-1">${isFinal ? `Campeón ${escHtml(home.code)}` : `Clasifica ${escHtml(home.code)}`}</span>
-                                            <span class="odd-val text-xs shrink-0">${oddsQualify.home.toFixed(2)}</span>
+                                        <button onclick="selectQualifyOutcome('${m.id}', 'HOME')" class="odd-btn ${isQualSel('HOME')} rounded-lg py-1 px-2 flex items-center justify-between text-left" style="min-height: 34px;">
+                                            <span class="text-[10px] font-bold uppercase truncate pr-1">${isFinal ? 'Camp.' : 'Clasif.'} ${escHtml(home.code)}</span>
+                                            <span class="odd-val text-xs shrink-0">${qualifyOdds.home.toFixed(2)}</span>
                                         </button>
-                                        <button onclick="selectQualifyOutcome('${m.id}', 'AWAY')" class="odd-btn ${isSelQual('AWAY')} rounded-lg py-1.5 px-2 flex items-center justify-between">
-                                            <span class="text-[10px] font-bold truncate pr-1">${isFinal ? `Campeón ${escHtml(away.code)}` : `Clasifica ${escHtml(away.code)}`}</span>
-                                            <span class="odd-val text-xs shrink-0">${oddsQualify.away.toFixed(2)}</span>
+                                        <button onclick="selectQualifyOutcome('${m.id}', 'AWAY')" class="odd-btn ${isQualSel('AWAY')} rounded-lg py-1 px-2 flex items-center justify-between text-left" style="min-height: 34px;">
+                                            <span class="text-[10px] font-bold uppercase truncate pr-1">${isFinal ? 'Camp.' : 'Clasif.'} ${escHtml(away.code)}</span>
+                                            <span class="odd-val text-xs shrink-0">${qualifyOdds.away.toFixed(2)}</span>
                                         </button>
                                     </div>
                                 ` : ''}
                             </div>
                         ` : `
                             <div class="sm:w-60 shrink-0 text-right text-[11px] text-neutral-400 space-y-1">
-                                ${isKnockout && m.winnerId ? `<div class="inline-block bg-[#027b5b]/30 border border-emerald-500/40 text-emerald-300 px-2 py-0.5 rounded font-bold">${isFinal ? 'Campeón' : 'Clasificó'}: ${escHtml(getTeam(m.winnerId)?.name || '')}</div>` : ''}
                                 ${mvp ? `<div class="inline-block bg-[#1e1e1e] border border-[#444] text-[#ffdf1b] px-2 py-0.5 rounded font-semibold">MVP: ${escHtml(mvp.name)}</div>` : ''}
                                 <div>Apuestas liquidadas</div>
                             </div>
@@ -3346,164 +3334,360 @@
             `;
         }
 
-        /* --- Sección Apuestas Especiales del Torneo --- */
-        function renderSpecials() {
-            const container = document.getElementById('specials-container');
-            const badge = document.getElementById('specials-status-badge');
-            if (!container) return;
+        /* --- Combinadas IA / Bet Boosts (reemplaza las 4 tarjetas superiores) --- */
+        let cachedAiBoosts = [];
 
-            const done = isTournamentFinished();
-            if (badge) {
-                badge.textContent = done ? 'Torneo Finalizado' : 'Abiertas para Desafíos 1v1';
+        function applyAiBoostCombo(boostIndex) {
+            const combo = cachedAiBoosts[boostIndex];
+            if (!combo || !combo.legs || !combo.legs.length) return;
+            activeSlipLegs = combo.legs.map(l => ({ ...l }));
+            renderBetSlip();
+            renderMatches();
+            renderKnockout();
+            showToast(`Combinada "${combo.title}" cargada en tu boleto (Cuota ${combo.boostedOdd.toFixed(2)}).`);
+            if (window.innerWidth < 1024) {
+                openMobileSlipDrawer();
             }
-
-            if (!tournamentState.teams.length) {
-                container.innerHTML = `<div class="lg:col-span-2 bg-[#282828] border border-[#3a3a3a] rounded-lg p-8 text-center text-neutral-400 text-sm">Todavía no hay selecciones inscritas en el torneo.</div>`;
-                return;
-            }
-
-            const sp = computeTournamentSpecials();
-
-            const renderSpecialBox = (title, subtitle, marketType, groupName, options, prefixText) => `
-                <div class="bg-[#282828] border border-[#3a3a3a] rounded-lg overflow-hidden flex flex-col">
-                    <div class="bg-[#027b5b] px-4 py-3 flex items-center justify-between">
-                        <div>
-                            <h3 class="text-sm font-bold text-white uppercase tracking-wider">${escHtml(title)}</h3>
-                            <p class="text-[11px] text-emerald-100">${escHtml(subtitle)}</p>
-                        </div>
-                        <span class="text-[10px] bg-black/25 text-[#ffdf1b] font-bold px-2 py-0.5 rounded">${sp.anyPlayed ? 'DINÁMICA' : 'APERTURA'}</span>
-                    </div>
-                    <div class="p-3 space-y-2 max-h-96 overflow-y-auto">
-                        ${options.map(opt => {
-                            const label = `${prefixText}: ${opt.name}`;
-                            return `
-                                <div class="bg-[#1f1f1f] border border-[#363636] rounded px-3 py-2 flex items-center justify-between gap-2">
-                                    <div class="flex items-center space-x-2.5 min-w-0">
-                                        ${flagMarkup(opt.team)}
-                                        <div class="min-w-0">
-                                            <div class="text-xs sm:text-sm font-bold text-white truncate">${escHtml(opt.name)}</div>
-                                            <div class="text-[10px] text-neutral-400 truncate">${escHtml(opt.sub)}</div>
-                                        </div>
-                                    </div>
-                                    <button ${done ? 'disabled' : ''} onclick="selectSpecialBet('${marketType}', ${groupName ? `'${escHtml(groupName)}'` : 'null'}, '${opt.targetId}', ${opt.odd}, '${escHtml(label)}')" class="odd-btn rounded px-3 py-1.5 text-center shrink-0 disabled:opacity-40">
-                                        <span class="odd-val text-xs sm:text-sm">${opt.odd.toFixed(2)}</span>
-                                    </button>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-            `;
-
-            const groupsHtml = sp.groupWinners.map(gw =>
-                renderSpecialBox(
-                    `1° Puesto — ${gw.groupName}`,
-                    '¿Qué selección termina primera en esta zona?',
-                    'GROUP_WINNER',
-                    gw.groupName,
-                    gw.options,
-                    `1° de ${gw.groupName}`
-                )
-            ).join('');
-
-            container.innerHTML =
-                renderSpecialBox('Campeón del Mundial 3v3', '¿Qué selección levanta la copa?', 'CHAMPION', null, sp.championOptions, 'Campeón') +
-                renderSpecialBox('Máximo Goleador (Bota de Oro)', `Todos los jugadores (${sp.topScorerOptions.length}) • ¿Quién mete más goles?`, 'TOP_SCORER', null, sp.topScorerOptions, 'Goleador del Torneo') +
-                renderSpecialBox('Mejor Jugador (Más MVPs)', `Todos los jugadores (${sp.topMvpOptions.length}) • ¿Quién gana más premios MVP?`, 'TOP_MVP', null, sp.topMvpOptions, 'Más MVPs') +
-                groupsHtml;
         }
 
-        /* --- Bandeja de Desafíos 1v1 (Recibidos y Enviados) --- */
-        function renderOpenMarket() {
-            const openBets = Object.values(betsMap)
-                .filter(b => b.status === 'OPEN')
-                .sort((a, b) => b.createdAt - a.createdAt);
+        function buildDynamicAiBoosts() {
+            const pendingKo = tournamentState.knockoutMatches
+                .filter(m => !m.played && m.homeId && m.awayId)
+                .map(m => ({ ...m, _ko: true }));
+            const pendingReg = tournamentState.matches
+                .filter(m => !m.played && m.homeId && m.awayId)
+                .sort((a, b) => (a.round || 1) - (b.round || 1))
+                .map(m => ({ ...m, _ko: false }));
 
-            const incomingForMe = currentUser
-                ? openBets.filter(b => b.targetUser === currentUser)
-                : [];
+            let targetMatches = [];
+            let stageContext = 'Próximos partidos';
 
-            document.getElementById('open-bets-badge').textContent = incomingForMe.length;
-            const mobileBadge = document.getElementById('mobile-open-bets-badge');
-            if (mobileBadge) {
-                mobileBadge.textContent = incomingForMe.length;
-                mobileBadge.classList.toggle('hidden', incomingForMe.length === 0);
+            if (pendingKo.length > 0) {
+                // Agrupar por la instancia eliminatoria activa (ej. Cuartos, Semis, Final)
+                const firstStage = pendingKo[0].stage;
+                targetMatches = pendingKo.filter(m => m.stage === firstStage);
+                stageContext = targetMatches[0].stageName || 'Eliminación Directa';
+            } else if (pendingReg.length > 0) {
+                const nextRound = pendingReg[0].round || 1;
+                targetMatches = pendingReg.filter(m => (m.round || 1) === nextRound);
+                stageContext = `Fecha ${nextRound}`;
             }
 
-            const mini = document.getElementById('mini-open-bets');
-            if (!currentUser) {
-                mini.innerHTML = `<div class="text-neutral-400 text-center py-3">Iniciá sesión para ver tus desafíos 1v1 recibidos.</div>`;
-            } else if (incomingForMe.length === 0) {
-                mini.innerHTML = `<div class="text-neutral-400 text-center py-3">No tenés desafíos 1v1 pendientes de responder.</div>`;
-            } else {
-                mini.innerHTML = incomingForMe.slice(0, 4).map(b => `
-                    <div class="bg-[#1f1f1f] border border-[#ffdf1b]/40 rounded p-2.5 space-y-1.5">
-                        <div class="flex justify-between text-[11px]">
-                            <span class="font-bold text-white">De: ${escHtml(b.creator)}</span>
-                            <span class="text-[#ffdf1b] font-bold">x${b.odd.toFixed(2)}</span>
-                        </div>
-                        <div class="text-[11px] text-neutral-300 truncate">${escHtml(b.matchLabel)} — <strong>${escHtml(b.pickLabel)}</strong></div>
-                        <div class="flex items-center justify-between pt-1 gap-1.5">
-                            <span class="text-[10px] text-neutral-400">Ponés ${formatMoney(b.takerStake)} → Pozo ${formatMoney(b.creatorStake + b.takerStake)}</span>
-                            <div class="flex space-x-1">
-                                <button onclick="rejectP2PBet('${b.id}')" class="bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 text-[10px] font-bold px-2 py-1 rounded">Rechazar</button>
-                                <button onclick="acceptP2PBet('${b.id}')" class="bg-[#027b5b] hover:bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-1 rounded">Aceptar</button>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
+            if (targetMatches.length === 0) {
+                // Si no hay partidos pendientes, armar especiales del torneo para mantener mínimo 4 tarjetas
+                const sp = computeTournamentSpecials();
+                const specials = [];
+                if (sp.championOptions[0]) {
+                    specials.push({
+                        title: 'FAVORITO AL TÍTULO',
+                        subtitle: 'Campeón del Torneo',
+                        legs: [{
+                            category: 'SPECIAL', matchId: 'TOURNAMENT_SPECIAL', isKnockout: false,
+                            marketType: 'CHAMPION', pick: 'CHAMPION', targetId: sp.championOptions[0].targetId,
+                            line: null, pickLabel: `Campeón: ${sp.championOptions[0].name}`,
+                            odd: sp.championOptions[0].odd, matchTitle: 'Especial Torneo 3v3',
+                            meta: 'Apuesta Especial • Torneo Completo', team: sp.championOptions[0].team
+                        }],
+                        baseOdd: sp.championOptions[0].odd,
+                        boostedOdd: clampOdd(sp.championOptions[0].odd * 1.15, 1.30, 35.00),
+                        popularity: 412
+                    });
+                }
+                if (sp.topScorerOptions[0]) {
+                    specials.push({
+                        title: 'BOTA DE ORO IA',
+                        subtitle: 'Máximo Goleador',
+                        legs: [{
+                            category: 'SPECIAL', matchId: 'TOURNAMENT_SPECIAL', isKnockout: false,
+                            marketType: 'TOP_SCORER', pick: 'TOP_SCORER', targetId: sp.topScorerOptions[0].targetId,
+                            line: null, pickLabel: `Goleador del Torneo: ${sp.topScorerOptions[0].name}`,
+                            odd: sp.topScorerOptions[0].odd, matchTitle: 'Especial Torneo 3v3',
+                            meta: 'Apuesta Especial • Torneo Completo', team: sp.topScorerOptions[0].team
+                        }],
+                        baseOdd: sp.topScorerOptions[0].odd,
+                        boostedOdd: clampOdd(sp.topScorerOptions[0].odd * 1.15, 1.30, 35.00),
+                        popularity: 328
+                    });
+                }
+                return { stageContext: 'Torneo Finalizado', combos: specials };
             }
 
-            const container = document.getElementById('market-bets-list');
-            if (!currentUser) {
-                container.innerHTML = `
-                    <div class="md:col-span-2 bg-[#282828] border border-[#3a3a3a] rounded-lg p-10 text-center space-y-3">
-                        <div class="text-neutral-300 text-sm">Iniciá sesión para ver los desafíos 1v1 que te mandaron o los que enviaste.</div>
-                        <button onclick="openAuthModal('login')" class="bg-[#ffdf1b] text-[#111] font-bold text-xs px-4 py-2 rounded">Iniciar Sesión</button>
-                    </div>
-                `;
+            // Analizar cada partido próximo con las cuotas y proyecciones de IA
+            const analyzed = targetMatches.map(m => {
+                const home = getTeam(m.homeId);
+                const away = getTeam(m.awayId);
+                const isKo = Boolean(m._ko);
+                const odds = computeMatchOdds(m, isKo);
+                const props = computeMatchPropOdds(m);
+                const homeFav = odds.home <= odds.away;
+                const favTeam = homeFav ? home : away;
+                const dogTeam = homeFav ? away : home;
+                const favPick = homeFav ? 'HOME' : 'AWAY';
+                const favOdd = homeFav ? odds.home : odds.away;
+                const dogOdd = homeFav ? odds.away : odds.home;
+                const line35 = props.lines.find(l => l.line === 3.5) || props.lines[0];
+                const line45 = props.lines.find(l => l.line === 4.5) || line35;
+                const topPlayer = [...props.playersOdds].sort((a, b) => a.odd1 - b.odd1)[0];
+
+                return {
+                    m, home, away, isKo, odds, props,
+                    favTeam, dogTeam, favPick, favOdd, dogOdd,
+                    line35, line45, topPlayer,
+                    meta: isKo ? (m.stageName || 'Eliminatoria') : `${m.groupName} • Fecha ${m.round || 1}`,
+                    matchTitle: `${home.name} vs ${away.name}`
+                };
+            });
+
+            const combos = [];
+            const isFinal = targetMatches.length === 1 && targetMatches[0].stage === 'F';
+
+            // 1. COMBINADA DE FAVORITOS (en eliminación usa "Clasifica", en grupos usa "Gana")
+            const favLegs = analyzed.map(item => ({
+                category: 'MATCH',
+                matchId: item.m.id,
+                isKnockout: item.isKo,
+                marketType: item.isKo ? 'QUALIFY' : '1X2',
+                pick: item.favPick,
+                targetId: null,
+                line: null,
+                pickLabel: item.isKo
+                    ? (isFinal ? `${item.favTeam.name} Campeón (incl. penales)` : `Clasifica ${item.favTeam.name}`)
+                    : `Gana ${item.favTeam.name}`,
+                odd: item.favOdd,
+                matchTitle: item.matchTitle,
+                meta: item.meta,
+                shortTitle: `${item.favTeam.name} (v ${item.dogTeam.name})`,
+                team: item.favTeam
+            }));
+            const baseFavOdd = computeCombinedOdd(favLegs);
+            combos.push({
+                title: isFinal ? 'FAVORITO EN LA FINAL' : `FAVORITOS ${stageContext.toUpperCase()}`,
+                subtitle: itemSubtitle(analyzed.length, analyzed[0]?.isKo ? 'Clasifica / Avanza' : 'Resultado Final'),
+                legs: favLegs,
+                baseOdd: baseFavOdd,
+                boostedOdd: clampOdd(baseFavOdd * 1.16, 1.35, 38.00),
+                popularity: 480 + analyzed.length * 65
+            });
+
+            // 2. FAVORITOS + MÁS DE 3.5 GOLES EN TODOS LOS PARTIDOS (exactamente como pidió el usuario)
+            const favOverLegs = [];
+            analyzed.forEach(item => {
+                favOverLegs.push({
+                    category: 'MATCH',
+                    matchId: item.m.id,
+                    isKnockout: item.isKo,
+                    marketType: item.isKo ? 'QUALIFY' : '1X2',
+                    pick: item.favPick,
+                    targetId: null,
+                    line: null,
+                    pickLabel: item.isKo
+                        ? (isFinal ? `${item.favTeam.name} Campeón` : `Clasifica ${item.favTeam.name}`)
+                        : `Gana ${item.favTeam.name}`,
+                    odd: item.favOdd,
+                    matchTitle: item.matchTitle,
+                    meta: item.meta,
+                    shortTitle: `${item.favTeam.name} y +${item.line35.line} goles (v ${item.dogTeam.name})`,
+                    team: item.favTeam
+                });
+                favOverLegs.push({
+                    category: 'MATCH',
+                    matchId: item.m.id,
+                    isKnockout: item.isKo,
+                    marketType: 'TOTAL_GOALS',
+                    pick: 'OVER',
+                    targetId: null,
+                    line: item.line35.line,
+                    pickLabel: `Más de ${item.line35.line} goles (${item.home.code}-${item.away.code})`,
+                    odd: item.line35.overOdd,
+                    matchTitle: item.matchTitle,
+                    meta: item.meta,
+                    hiddenInSummary: true
+                });
+            });
+            const baseFavOverOdd = computeCombinedOdd(favOverLegs);
+            combos.push({
+                title: 'SHOW DE GOLES Y FAVORITOS',
+                subtitle: `Gana favorito + Más de 3.5 goles`,
+                legs: favOverLegs,
+                baseOdd: baseFavOverOdd,
+                boostedOdd: clampOdd(baseFavOverOdd * 1.20, 1.60, 42.00),
+                popularity: 615 + analyzed.length * 40
+            });
+
+            // 3. LLUVIA DE GOLES (Más de 4.5 goles en los partidos)
+            const highGoalsLegs = analyzed.map(item => ({
+                category: 'MATCH',
+                matchId: item.m.id,
+                isKnockout: item.isKo,
+                marketType: 'TOTAL_GOALS',
+                pick: 'OVER',
+                targetId: null,
+                line: item.line45.line,
+                pickLabel: `Más de ${item.line45.line} goles (${item.home.code}-${item.away.code})`,
+                odd: item.line45.overOdd,
+                matchTitle: item.matchTitle,
+                meta: item.meta,
+                shortTitle: `${item.home.name} vs ${item.away.name} (+${item.line45.line})`,
+                team: item.home
+            }));
+            const baseGoalsOdd = computeCombinedOdd(highGoalsLegs);
+            combos.push({
+                title: 'LLUVIA DE GOLES 3v3',
+                subtitle: `Más de ${analyzed[0].line45.line} goles por partido`,
+                legs: highGoalsLegs,
+                baseOdd: baseGoalsOdd,
+                boostedOdd: clampOdd(baseGoalsOdd * 1.18, 1.50, 40.00),
+                popularity: 390 + analyzed.length * 35
+            });
+
+            // 4. GOLEADORES EN RACHA (cada figura mete +0.5 o +1.5 goles en su partido)
+            const scorersLegs = analyzed
+                .filter(item => item.topPlayer)
+                .map(item => {
+                    const useTwo = analyzed.length === 1;
+                    const line = useTwo ? 1.5 : 0.5;
+                    const odd = useTwo ? item.topPlayer.odd2 : item.topPlayer.odd1;
+                    return {
+                        category: 'MATCH',
+                        matchId: item.m.id,
+                        isKnockout: item.isKo,
+                        marketType: 'PLAYER_GOALS',
+                        pick: 'PLAYER_OVER',
+                        targetId: item.topPlayer.player.id,
+                        line,
+                        pickLabel: `${item.topPlayer.player.name} +${line} goles (${useTwo ? '2+' : '1+'})`,
+                        odd,
+                        matchTitle: item.matchTitle,
+                        meta: item.meta,
+                        shortTitle: `${item.topPlayer.player.name} +${line} (${item.topPlayer.team.code})`,
+                        team: item.topPlayer.team
+                    };
+                });
+            if (scorersLegs.length > 0) {
+                const baseScorerOdd = computeCombinedOdd(scorersLegs);
+                combos.push({
+                    title: 'FIGURAS AL ATAQUE',
+                    subtitle: 'Goleadores proyectados por IA',
+                    legs: scorersLegs,
+                    baseOdd: baseScorerOdd,
+                    boostedOdd: clampOdd(baseScorerOdd * 1.17, 1.45, 38.00),
+                    popularity: 530 + scorersLegs.length * 25
+                });
+            }
+
+            // 5. GOLPE EN LA MESA (Sorpresa: gana/clasifica el equipo con menos chances en el duelo más parejo)
+            const closestItem = [...analyzed].sort((a, b) => Math.abs(a.odds.home - a.odds.away) - Math.abs(b.odds.home - b.odds.away))[0];
+            if (closestItem) {
+                const upsetPick = closestItem.favPick === 'HOME' ? 'AWAY' : 'HOME';
+                const upsetLegs = [{
+                    category: 'MATCH',
+                    matchId: closestItem.m.id,
+                    isKnockout: closestItem.isKo,
+                    marketType: closestItem.isKo ? 'QUALIFY' : '1X2',
+                    pick: upsetPick,
+                    targetId: null,
+                    line: null,
+                    pickLabel: closestItem.isKo
+                        ? `Clasifica ${closestItem.dogTeam.name}`
+                        : `Gana ${closestItem.dogTeam.name}`,
+                    odd: closestItem.dogOdd,
+                    matchTitle: closestItem.matchTitle,
+                    meta: closestItem.meta,
+                    shortTitle: `${closestItem.dogTeam.name} (v ${closestItem.favTeam.name})`,
+                    team: closestItem.dogTeam
+                }];
+                if (closestItem.topPlayer) {
+                    upsetLegs.push({
+                        category: 'MATCH',
+                        matchId: closestItem.m.id,
+                        isKnockout: closestItem.isKo,
+                        marketType: 'TOTAL_GOALS',
+                        pick: 'OVER',
+                        targetId: null,
+                        line: closestItem.line35.line,
+                        pickLabel: `Más de ${closestItem.line35.line} goles (${closestItem.home.code}-${closestItem.away.code})`,
+                        odd: closestItem.line35.overOdd,
+                        matchTitle: closestItem.matchTitle,
+                        meta: closestItem.meta,
+                        shortTitle: `Más de ${closestItem.line35.line} goles en el partido`,
+                        team: closestItem.away
+                    });
+                }
+                const baseUpsetOdd = computeCombinedOdd(upsetLegs);
+                combos.push({
+                    title: 'BATACAZO DE LA FECHA',
+                    subtitle: 'Sorpresa + Partido abierto',
+                    legs: upsetLegs,
+                    baseOdd: baseUpsetOdd,
+                    boostedOdd: clampOdd(baseUpsetOdd * 1.22, 2.20, 45.00),
+                    popularity: 295
+                });
+            }
+
+            return { stageContext, combos };
+        }
+
+        function itemSubtitle(count, label) {
+            return count > 1 ? `${label} (${count} partidos)` : label;
+        }
+
+        function renderSummaryStrip() {
+            const el = document.getElementById('summary-strip');
+            const ctxEl = document.getElementById('ai-boosts-context');
+            if (!el) return;
+
+            const { stageContext, combos } = buildDynamicAiBoosts();
+            cachedAiBoosts = combos;
+            if (ctxEl) ctxEl.textContent = `Combinadas IA • ${stageContext}`;
+
+            if (!combos.length) {
+                el.innerHTML = `<div class="w-full bg-[#282828] border border-[#3a3a3a] rounded-lg p-4 text-xs text-neutral-400">Esperando partidos para generar combinadas IA...</div>`;
                 return;
             }
 
-            const myPending = openBets.filter(b => b.targetUser === currentUser || b.creator === currentUser);
-            if (myPending.length === 0) {
-                container.innerHTML = `
-                    <div class="md:col-span-2 bg-[#282828] border border-[#3a3a3a] rounded-lg p-10 text-center text-neutral-400 text-sm">
-                        No tenés desafíos 1v1 pendientes. Tocá una cuota en "Partidos" o "Apuestas Especiales" para desafiar a un amigo.
-                    </div>
-                `;
-                return;
-            }
+            el.innerHTML = combos.map((c, idx) => {
+                const visibleLegs = c.legs.filter(l => !l.hiddenInSummary);
+                const shownLegs = visibleLegs.slice(0, 3);
+                const extraCount = visibleLegs.length - shownLegs.length;
+                const sampleReturn = Math.round(1000 * c.boostedOdd).toLocaleString('es-AR');
 
-            container.innerHTML = myPending.map(b => {
-                const pot = b.creatorStake + b.takerStake;
-                const isMine = b.creator === currentUser;
                 return `
-                    <div class="bg-[#282828] border ${isMine ? 'border-[#3d3d3d]' : 'border-[#ffdf1b]/50'} rounded-lg p-4 flex flex-col justify-between space-y-3">
-                        <div class="space-y-1">
-                            <div class="flex items-center justify-between text-[11px]">
-                                <span class="text-emerald-400 font-bold uppercase">${escHtml(b.meta)}</span>
-                                <span class="bg-[#1e1e1e] text-[#ffdf1b] font-bold px-2 py-0.5 rounded border border-[#444]">Cuota ${b.odd.toFixed(2)}</span>
+                    <div class="snap-start shrink-0 w-[265px] sm:w-[285px] bg-[#222222] border border-[#3a3a3a] hover:border-[#00e676]/60 rounded-xl p-3.5 flex flex-col justify-between space-y-3 transition shadow-md">
+                        <div class="space-y-2">
+                            <div>
+                                <div class="font-sport text-lg font-extrabold text-white tracking-wide leading-tight truncate">${escHtml(c.title)}</div>
+                                <div class="text-[11px] font-semibold text-neutral-300 truncate">${escHtml(c.subtitle)}</div>
                             </div>
-                            <div class="text-sm font-bold text-white">${escHtml(b.matchLabel)}</div>
-                            <div class="text-xs text-neutral-300">
-                                <strong class="text-white">${escHtml(b.creator)}</strong> desafió 1v1 a <strong class="text-[#ffdf1b]">${escHtml(b.targetUser || 'Rival')}</strong>:
-                                <div class="mt-0.5">Pronóstico de ${escHtml(b.creator)}: <span class="underline text-white">${escHtml(b.pickLabel)}</span> (${formatMoney(b.creatorStake)})</div>
+
+                            <div class="space-y-1.5 pt-0.5">
+                                ${shownLegs.map(leg => `
+                                    <div class="flex items-center space-x-2 text-xs text-neutral-200">
+                                        ${leg.team ? flagMarkup(leg.team, 'w-4 h-3') : '<span class="w-2 h-2 rounded-full bg-[#00e676] shrink-0"></span>'}
+                                        <span class="truncate">${escHtml(leg.shortTitle || leg.pickLabel)}</span>
+                                    </div>
+                                `).join('')}
+                                ${extraCount > 0 ? `
+                                    <div class="text-[11px] font-bold text-[#00e676] pl-6">
+                                        + ${extraCount} selección${extraCount > 1 ? 'es' : ''} más...
+                                    </div>
+                                ` : ''}
                             </div>
                         </div>
 
-                        <div class="bg-[#1e1e1e] rounded p-3 flex flex-wrap items-center justify-between gap-2 text-xs border border-[#383838]">
-                            <div>
-                                <div class="text-neutral-400">${isMine ? `Esperando que ${escHtml(b.targetUser)} acepte:` : 'Para tomar el lado contrario ponés:'}</div>
-                                <div class="text-sm font-extrabold text-white">${formatMoney(b.takerStake)} <span class="text-emerald-400 font-bold">(Pozo total ${formatMoney(pot)})</span></div>
+                        <div class="space-y-2 pt-1">
+                            <div class="flex items-center justify-between text-[11px]">
+                                <span class="font-extrabold uppercase tracking-wider text-[#00e676]">BET BOOST &raquo;</span>
+                                <span class="text-amber-300 font-bold">🔥 ${c.popularity}</span>
                             </div>
-                            ${isMine
-                                ? `<button onclick="cancelOpenBet('${b.id}')" class="bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 border border-rose-500/40 px-3 py-2 rounded font-bold text-xs">Cancelar Envío</button>`
-                                : `<div class="flex space-x-2">
-                                    <button onclick="rejectP2PBet('${b.id}')" class="bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 border border-rose-500/40 px-3 py-2 rounded font-bold text-xs">Rechazar</button>
-                                    <button onclick="acceptP2PBet('${b.id}')" class="bg-[#ffdf1b] hover:bg-yellow-300 text-[#111] px-4 py-2 rounded font-extrabold text-xs shadow">Aceptar 1v1</button>
-                                   </div>`
-                            }
+
+                            <button type="button" onclick="applyAiBoostCombo(${idx})" class="w-full bg-[#2e2e2e] hover:bg-[#3a3a3a] active:scale-[0.98] border border-[#444] hover:border-[#ffdf1b] rounded-lg py-2 px-3 text-center transition">
+                                <div class="flex items-center justify-center space-x-2">
+                                    <span class="text-xs text-neutral-400 line-through font-semibold">${c.baseOdd.toFixed(2)}</span>
+                                    <span class="text-xs text-neutral-300 font-bold">&raquo;</span>
+                                    <span class="text-base sm:text-lg font-extrabold text-[#ffdf1b]">${c.boostedOdd.toFixed(2)}</span>
+                                </div>
+                                <div class="text-[10px] text-neutral-400">$1.000 paga $${sampleReturn}</div>
+                            </button>
                         </div>
                     </div>
                 `;
